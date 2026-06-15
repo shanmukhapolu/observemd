@@ -1,4 +1,4 @@
-# ShadowMed
+# ObserveRx
 
 A simple tool for tracking clinical shadowing hours, reflections, and experiences to help students stay organized as they explore medicine. It turns scattered time in clinics and hospitals into a clear record of progress toward a healthcare path.
 

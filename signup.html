@@ -342,6 +342,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/fireba
 import {
   getAuth,
   createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
@@ -360,44 +361,74 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-/* =========================
-   SIGNUP LOGIC (THIS PAGE)
-========================= */
+/* ---------------- SAFE ELEMENT ACCESS ---------------- */
 
 const form = document.querySelector("form");
 const googleBtn = document.querySelector(".google");
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
+/* ---------------- DETECT PAGE ---------------- */
 
-  const inputs = form.querySelectorAll("input");
+const isSignup = document.querySelectorAll("input").length === 4;
 
-  const name = inputs[0].value;
-  const email = inputs[1].value;
-  const password = inputs[2].value;
-  const confirm = inputs[3].value;
+/* ---------------- SIGNUP ---------------- */
 
-  if (password !== confirm) {
-    alert("Passwords do not match");
-    return;
-  }
+if (isSignup) {
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  try {
-    await createUserWithEmailAndPassword(auth, email, password);
-    window.location.href = "dashboard.html";
-  } catch (err) {
-    alert(err.message);
-  }
-});
+    const inputs = form.querySelectorAll("input");
 
-googleBtn.addEventListener("click", async () => {
-  try {
-    await signInWithPopup(auth, provider);
-    window.location.href = "dashboard.html";
-  } catch (err) {
-    alert(err.message);
-  }
-});
+    const name = inputs[0].value;
+    const email = inputs[1].value;
+    const password = inputs[2].value;
+    const confirm = inputs[3].value;
+
+    if (password !== confirm) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+/* ---------------- LOGIN ---------------- */
+
+if (!isSignup) {
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const inputs = form.querySelectorAll("input");
+
+    const email = inputs[0].value;
+    const password = inputs[1].value;
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+/* ---------------- GOOGLE (SAFE) ---------------- */
+
+if (googleBtn) {
+  googleBtn.addEventListener("click", async () => {
+    try {
+      await signInWithPopup(auth, provider);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
 </script>
 </body>
 </html>

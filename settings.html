@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings • ObserveMD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Settings</h1>
+        <p>Manage your profile, portfolio export, and observation data.</p>
+      </div>
+    </div>
+
+    <div class="grid-2-even">
+      <div class="card">
+        <div class="card-head"><h3>Student Profile</h3></div>
+        <p style="color:var(--muted);font-size:.88rem;margin-bottom:18px">Used on the cover page of your exported portfolio.</p>
+        <form id="profileForm">
+          <div class="form-grid">
+            <div class="field full"><label>Full Name</label><input name="name" required></div>
+            <div class="field full"><label>Email</label><input type="email" name="email"></div>
+            <div class="field"><label>School / Institution</label><input name="school"></div>
+            <div class="field"><label>Graduation Year</label><input name="gradYear" placeholder="2027"></div>
+            <div class="field full"><label>Career Goal / Track</label>
+              <select name="goal">
+                <option>Pre-Med</option><option>Pre-Nursing</option><option>Pre-PA</option>
+                <option>Pre-Dental</option><option>Pre-Pharmacy</option><option>Public Health</option>
+                <option>Undecided Health Science</option>
+              </select></div>
+          </div>
+          <div class="modal-actions"><button class="btn" type="submit"><i data-lucide="save"></i>Save Profile</button></div>
+        </form>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <div class="card-head"><h3>Export Portfolio</h3></div>
+          <p style="color:var(--muted);font-size:.92rem;line-height:1.6;margin-bottom:18px">
+            Generate a polished, multi-page PDF with a cover page, professional summary, analytics, growth report,
+            reflection highlights, and your complete observation and reflection archive — ready to share with colleges,
+            scholarship committees, mentors, and physicians.</p>
+          <button class="btn" id="exportBtn" style="width:100%;justify-content:center"><i data-lucide="download"></i>Generate PDF Portfolio</button>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Your Data</h3></div>
+          <div class="mini-grid" id="dataStats" style="grid-template-columns:1fr 1fr"></div>
+          <div class="modal-actions" style="margin-top:18px">
+            <button class="btn btn-ghost btn-sm" id="resetBtn"><i data-lucide="rotate-ccw"></i>Reset to sample data</button>
+            <button class="btn btn-ghost btn-sm" id="clearBtn" style="color:#fda4af"><i data-lucide="trash-2"></i>Clear all data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-head"><h3>Fixed Reflection Questions</h3><span class="badge cyan">Required on every observation</span></div>
+      <div class="stack" id="qList"></div>
+    </div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+OMD.renderSidebar("settings");
+
+// load profile
+const p = OMD.getProfile();
+const form = document.getElementById("profileForm");
+["name","email","school","gradYear","goal"].forEach(k=>{ if(form[k]) form[k].value = p[k]||""; });
+form.addEventListener("submit",e=>{
+  e.preventDefault();
+  const f=new FormData(form);
+  OMD.saveProfile({name:f.get("name"),email:f.get("email"),school:f.get("school"),gradYear:f.get("gradYear"),goal:f.get("goal")});
+  OMD.toast("Profile saved");
+});
+
+// data stats
+const a = OMD.analytics();
+document.getElementById("dataStats").innerHTML =
+  `<div class="mini-stat"><div class="l">Observations</div><div class="v">${a.sessions}</div></div>`+
+  `<div class="mini-stat"><div class="l">Total Hours</div><div class="v">${a.totalHours}</div></div>`+
+  `<div class="mini-stat"><div class="l">Specialties</div><div class="v">${a.specialtiesCount}</div></div>`+
+  `<div class="mini-stat"><div class="l">Reflections</div><div class="v">${a.respCount}</div></div>`;
+
+// reflection questions list
+document.getElementById("qList").innerHTML = OMD.REFLECTION_QUESTIONS.map((q,i)=>`
+  <div class="row"><div class="row-left"><div class="row-title">${q}</div></div>
+  <span class="reflect-qnum" style="width:32px;height:32px">${i+1}</span></div>`).join("");
+
+document.getElementById("exportBtn").addEventListener("click",()=>OMD.exportPortfolio());
+document.getElementById("clearBtn").addEventListener("click",()=>{
+  if(confirm("Delete ALL observations and reflections? This cannot be undone.")){
+    localStorage.removeItem("observemd:observations:v1"); OMD.toast("All data cleared"); setTimeout(()=>location.reload(),700);
+  }
+});
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  if(confirm("Replace your data with the sample dataset?")){
+    localStorage.removeItem("observemd:observations:v1"); OMD.seedIfEmpty(); OMD.toast("Sample data restored"); setTimeout(()=>location.reload(),700);
+  }
+});
+lucide.createIcons();
+</script>
+</body>
+</html>

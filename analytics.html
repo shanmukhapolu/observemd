@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics • ObserveMD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Analytics</h1>
+        <p>A deep look at your observation hours, specialties, reflections, growth, and themes.</p>
+      </div>
+      <button class="btn" id="exportBtn"><i data-lucide="download"></i>Export Portfolio</button>
+    </div>
+
+    <!-- OBSERVATION ANALYTICS -->
+    <div class="section-title"><span class="si"><i data-lucide="clock"></i></span>Observation Analytics</div>
+    <div class="mini-grid" id="obsMini"></div>
+    <div class="grid-2-even" style="margin-top:16px">
+      <div class="card"><div class="card-head"><h3>Hours per Month</h3></div><div id="hoursMonth"></div></div>
+      <div class="card"><div class="card-head"><h3>Sessions per Month</h3></div><div id="sessMonth"></div></div>
+    </div>
+    <div class="grid-2-even" style="margin-top:16px">
+      <div class="card"><div class="card-head"><h3>Hours by Day of Week</h3></div><div id="dayChart"></div></div>
+      <div class="card"><div class="card-head"><h3>Streaks & Activity</h3></div><div id="streakBox"></div></div>
+    </div>
+
+    <!-- SPECIALTY ANALYTICS -->
+    <div class="section-title"><span class="si"><i data-lucide="layers"></i></span>Specialty Analytics</div>
+    <div class="grid-2" >
+      <div class="card"><div class="card-head"><h3>Hours per Specialty</h3></div><div id="specBars"></div></div>
+      <div class="card">
+        <div class="card-head"><h3>Specialty Distribution</h3></div>
+        <div style="display:flex;justify-content:center" id="specDonut"></div>
+        <div class="legend" id="specLegend"></div>
+      </div>
+    </div>
+    <div class="mini-grid" id="specMini" style="margin-top:16px"></div>
+
+    <!-- REFLECTION ANALYTICS -->
+    <div class="section-title"><span class="si"><i data-lucide="pen-line"></i></span>Reflection Analytics</div>
+    <div class="mini-grid" id="refMini"></div>
+    <div class="card" style="margin-top:16px"><div class="card-head"><h3>Response Length Trend (words / month)</h3></div><div id="wordsTrend"></div></div>
+
+    <!-- GROWTH ANALYTICS -->
+    <div class="section-title"><span class="si"><i data-lucide="trending-up"></i></span>Growth Analytics</div>
+    <div class="grid-2-even">
+      <div class="card"><div class="card-head"><h3>Reflection Complexity Over Time</h3><span class="sub">Avg words per response, by month</span></div><div id="complexTrend"></div></div>
+      <div class="card"><div class="card-head"><h3>Early vs. Recent Reflection</h3></div><div id="earlyRecent"></div></div>
+    </div>
+    <div class="mini-grid" id="growthMini" style="margin-top:16px"></div>
+
+    <!-- THEME ANALYTICS -->
+    <div class="section-title"><span class="si"><i data-lucide="tags"></i></span>Theme Analytics</div>
+    <div class="card">
+      <div class="card-head"><h3>Recurring Themes</h3><span class="sub">Extracted from reflection language</span></div>
+      <div id="themeBars"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:20px" id="themeTags"></div>
+    </div>
+
+    <!-- JOURNEY -->
+    <div class="section-title"><span class="si"><i data-lucide="route"></i></span>Observation Journey</div>
+    <div class="card"><div class="timeline" id="timeline"></div></div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+OMD.renderSidebar("analytics");
+const a = OMD.analytics();
+const r = OMD.round;
+
+function mini(l,v){ return `<div class="mini-stat"><div class="l">${l}</div><div class="v">${v}</div></div>`; }
+
+/* OBSERVATION */
+document.getElementById("obsMini").innerHTML =
+  mini("Total Hours", a.totalHours) + mini("Avg Session", a.avgSession+" h") +
+  mini("Longest Session", a.longest+" h") + mini("Shortest Session", a.shortest+" h");
+
+OMD.barChart(document.getElementById("hoursMonth"),
+  a.monthsSorted.map(OMD.monthLabel), a.monthsSorted.map(k=>r(a.byMonth[k])), {height:240});
+OMD.barChart(document.getElementById("sessMonth"),
+  a.monthsSorted.map(OMD.monthLabel), a.monthsSorted.map(k=>a.sessMonth[k]||0), {height:240, color:"#06b6d4"});
+OMD.barChart(document.getElementById("dayChart"),
+  ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], a.byDay.map(v=>r(v)), {height:240, color:"#22c55e"});
+
+document.getElementById("streakBox").innerHTML =
+  mini("Longest Streak", a.bestStreak+" day"+(a.bestStreak!==1?"s":"")) +
+  mini("Most Active Day", a.topDay) +
+  mini("Most Active Month", a.topMonth?OMD.monthLabel(a.topMonth[0]):"—") +
+  mini("Sessions Logged", a.sessions);
+document.getElementById("streakBox").className="mini-grid";
+document.getElementById("streakBox").style.gridTemplateColumns="1fr 1fr";
+
+/* SPECIALTY */
+const specSorted = Object.entries(a.bySpec).sort((x,z)=>z[1]-x[1]);
+const maxSpec = Math.max(...specSorted.map(s=>s[1]),1);
+document.getElementById("specBars").innerHTML = specSorted.map(([s,h])=>`
+  <div class="bar-row"><div class="lab">${s}</div>
+  <div class="bar-track"><div class="bar-fill" style="width:${h/maxSpec*100}%"></div></div>
+  <div class="val">${r(h)}h</div></div>`).join("");
+
+OMD.donut(document.getElementById("specDonut"), specSorted, {center:a.specialtiesCount, label:"specialties", size:200});
+document.getElementById("specLegend").innerHTML = specSorted.map(([s],i)=>`
+  <span class="legend-item"><span class="legend-dot" style="background:${OMD.colorFor(i)}"></span>${s}</span>`).join("");
+
+document.getElementById("specMini").innerHTML =
+  mini("Most Observed", a.topSpec?a.topSpec[0]:"—") +
+  mini("Least Observed", a.lowSpec?a.lowSpec[0]:"—") +
+  mini("Specialties", a.specialtiesCount) +
+  mini("Provider Diversity", a.providersCount+" providers");
+
+/* REFLECTION */
+const mostReflectiveMonth = Object.entries(a.wordsByMonth).sort((x,z)=>z[1]-x[1])[0];
+const activeMonths = a.monthsSorted.length;
+document.getElementById("refMini").innerHTML =
+  mini("Total Words", a.totalWords.toLocaleString()) +
+  mini("Avg Reflection", a.avgReflection+" words") +
+  mini("Most Reflective Month", mostReflectiveMonth?OMD.monthLabel(mostReflectiveMonth[0]):"—") +
+  mini("Writing Consistency", activeMonths+" active month"+(activeMonths!==1?"s":""));
+OMD.lineChart(document.getElementById("wordsTrend"),
+  a.monthsSorted.map(OMD.monthLabel), a.monthsSorted.map(k=>a.wordsByMonth[k]||0), {height:240});
+
+/* GROWTH */
+// avg words per response by month
+const respByMonth={}, wByMonth={};
+a.list.forEach(o=>{ const k=OMD.monthKey(o.date);
+  Object.values(o.reflections||{}).forEach(t=>{ const c=OMD.wordCount(t); if(c){ respByMonth[k]=(respByMonth[k]||0)+1; wByMonth[k]=(wByMonth[k]||0)+c; } });
+});
+const gMonths = a.monthsSorted;
+OMD.lineChart(document.getElementById("complexTrend"),
+  gMonths.map(OMD.monthLabel), gMonths.map(k=> respByMonth[k]?Math.round(wByMonth[k]/respByMonth[k]):0), {height:240});
+
+const early=a.list[a.list.length-1], recent=a.list[0];
+function totalW(o){ return Object.values(o.reflections||{}).reduce((s,t)=>s+OMD.wordCount(t),0); }
+if(early && recent){
+  const ew=totalW(early), rw=totalW(recent);
+  const change = ew? Math.round((rw-ew)/ew*100):0;
+  document.getElementById("earlyRecent").innerHTML = `
+    <div class="row"><div class="row-left"><div class="row-title">Earliest Session</div>
+      <div class="row-sub">${OMD.fmtDate(early.date)} • ${early.specialty}</div></div><span class="badge">${ew} words</span></div>
+    <div class="row"><div class="row-left"><div class="row-title">Most Recent Session</div>
+      <div class="row-sub">${OMD.fmtDate(recent.date)} • ${recent.specialty}</div></div><span class="badge green">${rw} words</span></div>
+    <div class="insight" style="margin-top:14px"><div class="insight-ic"><i data-lucide="sparkles"></i></div>
+      <div><div class="insight-title">Growth Signal</div>
+      <div class="insight-text">Reflection length changed <b>${change>=0?"+":""}${change}%</b> from your first to most recent session.</div></div></div>`;
+}
+document.getElementById("growthMini").innerHTML =
+  mini("Unique Concepts", a.uniqueWords) +
+  mini("Vocabulary Pool", a.uniqueWords+" words") +
+  mini("Avg Complexity", a.avgReflection+" w/resp") +
+  mini("Reflection Sets", a.sessions);
+
+/* THEMES */
+const themesSorted = Object.entries(a.themeCounts).sort((x,z)=>z[1]-x[1]);
+const maxTheme = Math.max(...themesSorted.map(t=>t[1]),1);
+document.getElementById("themeBars").innerHTML = themesSorted.map(([t,c],i)=>`
+  <div class="bar-row"><div class="lab">${t}</div>
+  <div class="bar-track"><div class="bar-fill" style="width:${c/maxTheme*100}%;background:${OMD.colorFor(i)}"></div></div>
+  <div class="val">${c}</div></div>`).join("");
+document.getElementById("themeTags").innerHTML = themesSorted.map(([t,c])=>`
+  <span class="theme-tag">${t} <span class="freq">${c}</span></span>`).join("");
+
+/* JOURNEY TIMELINE */
+const firstBySpec={};
+[...a.list].sort((x,z)=>new Date(x.date)-new Date(z.date)).forEach(o=>{ if(!firstBySpec[o.specialty]) firstBySpec[o.specialty]=o; });
+let cum=0; const milestones=[];
+[...a.list].sort((x,z)=>new Date(x.date)-new Date(z.date)).forEach(o=>{
+  const prev=cum; cum+=o.hours;
+  if(firstBySpec[o.specialty]===o) milestones.push({date:o.date, title:"Explored "+o.specialty, desc:`First session with ${o.providerName} at ${o.location}.`});
+  [25,50,100,150,200].forEach(m=>{ if(prev<m && cum>=m) milestones.push({date:o.date, title:m+" hours milestone", desc:`Reached ${m} cumulative observation hours.`}); });
+});
+milestones.sort((x,z)=>new Date(z.date)-new Date(x.date));
+document.getElementById("timeline").innerHTML = milestones.length ? milestones.map(m=>`
+  <div class="tl-item"><div class="tl-date">${OMD.fmtDate(m.date,{month:"long",day:"numeric",year:"numeric"})}</div>
+  <div class="tl-title">${m.title}</div><div class="tl-desc">${m.desc}</div></div>`).join("")
+  : `<p style="color:var(--muted)">Log observations to build your journey.</p>`;
+
+document.getElementById("exportBtn").addEventListener("click",()=>OMD.exportPortfolio());
+lucide.createIcons();
+</script>
+</body>
+</html>

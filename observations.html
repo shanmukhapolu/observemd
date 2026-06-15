@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Observations • ObserveMD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Observations</h1>
+        <p>Every session pairs the observation details with a complete reflection set.</p>
+      </div>
+      <button class="btn" id="newObsBtn"><i data-lucide="plus"></i>New Observation</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <i data-lucide="search"></i>
+        <input id="q" placeholder="Search specialty, provider, location, notes...">
+      </div>
+      <select class="control" id="fSpec"><option value="">All specialties</option></select>
+      <select class="control" id="fProv"><option value="">All providers</option></select>
+      <select class="control" id="fSort">
+        <option value="date-desc">Newest first</option>
+        <option value="date-asc">Oldest first</option>
+        <option value="hours-desc">Most hours</option>
+        <option value="hours-asc">Fewest hours</option>
+      </select>
+    </div>
+
+    <div id="count" style="color:var(--muted);font-size:.88rem;margin-bottom:16px;"></div>
+    <div class="obs-grid" id="grid"></div>
+  </main>
+</div>
+
+<!-- Detail modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" id="detailBody"></div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+OMD.renderSidebar("observations");
+const Q = OMD.REFLECTION_QUESTIONS;
+let all = OMD.getAll();
+
+// populate filters
+const specs = [...new Set(all.map(o=>o.specialty))].sort();
+const provs = [...new Set(all.map(o=>o.providerName))].sort();
+document.getElementById("fSpec").innerHTML += specs.map(s=>`<option>${s}</option>`).join("");
+document.getElementById("fProv").innerHTML += provs.map(p=>`<option>${p}</option>`).join("");
+
+function summary(o){ return o.notes && o.notes.length>120 ? o.notes.slice(0,120)+"…" : (o.notes||""); }
+
+function render(){
+  const q = document.getElementById("q").value.toLowerCase();
+  const fs = document.getElementById("fSpec").value;
+  const fp = document.getElementById("fProv").value;
+  const sort = document.getElementById("fSort").value;
+  let list = all.filter(o=>{
+    if(fs && o.specialty!==fs) return false;
+    if(fp && o.providerName!==fp) return false;
+    if(q){
+      const hay = (o.specialty+o.providerName+o.providerTitle+o.location+o.notes+Object.values(o.reflections||{}).join(" ")).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  list.sort((a,b)=>{
+    if(sort==="date-desc") return new Date(b.date)-new Date(a.date);
+    if(sort==="date-asc") return new Date(a.date)-new Date(b.date);
+    if(sort==="hours-desc") return b.hours-a.hours;
+    if(sort==="hours-asc") return a.hours-b.hours;
+  });
+
+  document.getElementById("count").textContent = `${list.length} observation${list.length!==1?"s":""}`;
+  const grid = document.getElementById("grid");
+  if(!list.length){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><i data-lucide="eye-off"></i><h3>No observations found</h3><p>Try adjusting your search or filters.</p></div>`;
+  } else {
+    grid.innerHTML = list.map(o=>`
+      <div class="obs-card" data-id="${o.id}">
+        <div class="obs-top">
+          <div><div class="obs-spec">${o.specialty}</div><div class="obs-prov">${o.providerName} • ${o.providerTitle}</div></div>
+          <span class="badge accent">${OMD.fmtDate(o.date,{month:"short",day:"numeric"})}</span>
+        </div>
+        <div class="obs-summary">${summary(o)}</div>
+        <div class="obs-foot">
+          <span class="obs-hours"><i data-lucide="clock"></i>${o.hours} hrs</span>
+          <span class="row-sub" style="display:flex;align-items:center;gap:5px;"><i data-lucide="map-pin" style="width:14px;height:14px"></i>${o.location}</span>
+        </div>
+      </div>`).join("");
+  }
+  lucide.createIcons();
+  document.querySelectorAll(".obs-card").forEach(c=>c.addEventListener("click",()=>openDetail(c.dataset.id)));
+}
+
+function openDetail(id){
+  const o = all.find(x=>x.id===id);
+  const overlay = document.getElementById("detailModal");
+  document.getElementById("detailBody").innerHTML = `
+    <div class="modal-head">
+      <div><h2>${o.specialty}</h2><p>${OMD.fmtDate(o.date,{weekday:"long",month:"long",day:"numeric",year:"numeric"})}</p></div>
+      <button class="icon-btn" data-close><i data-lucide="x"></i></button>
+    </div>
+    <div class="form-divider">Observation Information</div>
+    <div class="form-grid">
+      ${info("Provider", o.providerName)}
+      ${info("Title", o.providerTitle)}
+      ${info("Location", o.location)}
+      ${info("Specialty", o.specialty)}
+      ${info("Time", o.startTime+" – "+o.endTime)}
+      ${info("Total Hours", o.hours+" hrs")}
+    </div>
+    <div class="field full" style="margin-top:16px"><label>Observation Notes</label>
+      <div class="reflect-resp" style="border-left-color:var(--cyan)"><p>${o.notes||"—"}</p></div></div>
+    <div class="form-divider">Reflection Responses</div>
+    ${Q.map((q,i)=>`<div class="field full" style="margin-bottom:14px"><label>${i+1}. ${q}</label>
+      <div class="reflect-resp"><p>${o.reflections[i]||"—"}</p></div></div>`).join("")}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-del="${o.id}"><i data-lucide="trash-2"></i>Delete</button>
+      <button class="btn" data-close>Close</button>
+    </div>`;
+  overlay.classList.add("open");
+  lucide.createIcons();
+  overlay.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>overlay.classList.remove("open"));
+  overlay.onclick=e=>{ if(e.target===overlay) overlay.classList.remove("open"); };
+  const del = overlay.querySelector("[data-del]");
+  if(del) del.onclick=()=>{
+    if(confirm("Delete this observation and its reflections? This cannot be undone.")){
+      OMD.remove(o.id); all=OMD.getAll(); overlay.classList.remove("open"); render(); OMD.toast("Observation deleted");
+    }
+  };
+}
+function info(label,val){ return `<div class="field"><label>${label}</label><div style="font-size:.95rem;padding-top:2px">${val}</div></div>`; }
+
+["q","fSpec","fProv","fSort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
+document.getElementById("newObsBtn").addEventListener("click",()=>OMD.openObservationModal(()=>{ all=OMD.getAll(); render(); }));
+render();
+</script>
+</body>
+</html>

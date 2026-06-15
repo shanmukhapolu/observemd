@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reflections • ObserveMD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Reflections</h1>
+        <p>A growth journal — watch how your thinking on each question evolves over time.</p>
+      </div>
+      <button class="btn" id="newObsBtn"><i data-lucide="plus"></i>New Observation</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <i data-lucide="search"></i>
+        <input id="q" placeholder="Search your reflections...">
+      </div>
+      <select class="control" id="fSpec"><option value="">All specialties</option></select>
+      <input type="month" class="control" id="fMonth" title="Filter by month">
+      <button class="btn btn-ghost btn-sm" id="clearBtn"><i data-lucide="x"></i>Clear</button>
+    </div>
+
+    <div id="board"></div>
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+OMD.renderSidebar("reflections");
+const Q = OMD.REFLECTION_QUESTIONS;
+const all = OMD.getAll();
+
+const specs = [...new Set(all.map(o=>o.specialty))].sort();
+document.getElementById("fSpec").innerHTML += specs.map(s=>`<option>${s}</option>`).join("");
+
+function highlight(text,q){
+  if(!q) return text;
+  return text.replace(new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig"),
+    '<mark style="background:rgba(124,58,237,.35);color:#fff;border-radius:3px;padding:0 2px">$1</mark>');
+}
+
+function render(){
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const fs = document.getElementById("fSpec").value;
+  const fm = document.getElementById("fMonth").value;
+
+  let list = all.filter(o=>{
+    if(fs && o.specialty!==fs) return false;
+    if(fm && OMD.monthKey(o.date)!==fm) return false;
+    return true;
+  });
+
+  const board = document.getElementById("board");
+  let total = 0;
+  const sections = Q.map((question,qi)=>{
+    // responses for this question, newest first (list already sorted desc)
+    let resps = list
+      .filter(o=>(o.reflections||{})[qi])
+      .filter(o=> !q || o.reflections[qi].toLowerCase().includes(q))
+      .map(o=>({o, text:o.reflections[qi]}));
+    total += resps.length;
+    if(!resps.length) return "";
+    return `
+      <div class="reflect-section">
+        <div class="reflect-q">
+          <div class="reflect-qnum">${qi+1}</div>
+          <div><h3>${question}</h3><div class="count">${resps.length} response${resps.length!==1?"s":""} • newest first</div></div>
+        </div>
+        <div class="reflect-responses">
+          ${resps.map(r=>`
+            <div class="reflect-resp">
+              <div class="meta">
+                <span class="badge accent">${r.o.specialty}</span>
+                <span class="badge">${r.o.providerName}</span>
+                <span class="date">${OMD.fmtDate(r.o.date,{month:"long",day:"numeric",year:"numeric"})}</span>
+              </div>
+              <p>${highlight(r.text,q)}</p>
+            </div>`).join("")}
+        </div>
+      </div>`;
+  }).join("");
+
+  board.innerHTML = total
+    ? sections
+    : `<div class="empty"><i data-lucide="book-open"></i><h3>No reflections match</h3><p>Adjust your search or filters to see responses.</p></div>`;
+  lucide.createIcons();
+}
+
+["q","fSpec","fMonth"].forEach(id=>document.getElementById(id).addEventListener("input",render));
+document.getElementById("clearBtn").addEventListener("click",()=>{
+  document.getElementById("q").value=""; document.getElementById("fSpec").value=""; document.getElementById("fMonth").value=""; render();
+});
+document.getElementById("newObsBtn").addEventListener("click",()=>OMD.openObservationModal(()=>location.reload()));
+render();
+</script>
+</body>
+</html>

@@ -1,215 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
-<title>ObserveMD • Dashboard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floating Sidebar</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
 
 :root{
-  --bg:#050816;
-  --glass:rgba(255,255,255,.06);
-  --border:rgba(255,255,255,.1);
-  --muted:#94a3b8;
-  --purple:#8b5cf6;
-  --cyan:#06b6d4;
-  --pink:#ec4899;
+    --bg:#050816;
+    --glass:rgba(255,255,255,.06);
+    --glass2:rgba(255,255,255,.03);
+    --border:rgba(255,255,255,.10);
+    --text:#e5e7eb;
+    --muted:#94a3b8;
+
+    --purple:#8b5cf6;
+    --cyan:#06b6d4;
 }
 
+/* BASE */
 *{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Inter',sans-serif;
 }
 
 body{
-  font-family:'Inter',sans-serif;
-  background:var(--bg);
-  color:white;
-  height:100vh;
-  overflow:hidden;
+    background:var(--bg);
+    height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
 }
 
-/* background glow */
-body::before{
-  content:'';
-  position:fixed;
-  inset:0;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(139,92,246,.20), transparent 40%),
-    radial-gradient(circle at 80% 20%, rgba(6,182,212,.15), transparent 40%),
-    radial-gradient(circle at 50% 90%, rgba(236,72,153,.12), transparent 50%);
-  z-index:-2;
-}
-
-/* LAYOUT */
-.wrapper{
-  display:flex;
-  height:100vh;
-}
-
-/* SIDEBAR */
+/* SIDEBAR WRAPPER */
 .sidebar{
-  width:260px;
-  padding:2rem;
-  border-right:1px solid var(--border);
-  background:rgba(255,255,255,.02);
-  backdrop-filter:blur(20px);
+    position:fixed;
+    left:20px;
+    top:50%;
+    transform:translateY(-50%);
+
+    width:72px;
+    padding:12px;
+
+    background:var(--glass);
+    border:1px solid var(--border);
+    backdrop-filter:blur(20px);
+
+    border-radius:999px;
+
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+
+    transition:width .35s ease, border-radius .35s ease;
+    overflow:hidden;
 }
 
+/* EXPAND ON HOVER */
+.sidebar:hover{
+    width:220px;
+    border-radius:28px;
+}
+
+/* ITEM */
+.item{
+    display:flex;
+    align-items:center;
+    gap:14px;
+
+    padding:12px;
+    border-radius:999px;
+
+    cursor:pointer;
+    transition:.2s;
+
+    color:var(--muted);
+    user-select:none;
+}
+
+/* hover highlight */
+.item:hover{
+    background:var(--glass2);
+    color:white;
+}
+
+/* ACTIVE STATE */
+.item.active{
+    background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(6,182,212,.15));
+    color:white;
+}
+
+/* ICON */
+.icon{
+    min-width:48px;
+    height:48px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border-radius:999px;
+
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+
+    font-size:18px;
+}
+
+/* LABEL (HIDDEN UNTIL EXPAND) */
+.label{
+    opacity:0;
+    transform:translateX(-10px);
+    transition:.25s ease;
+    white-space:nowrap;
+}
+
+/* SHOW LABEL ON HOVER */
+.sidebar:hover .label{
+    opacity:1;
+    transform:translateX(0);
+}
+
+/* TOP LOGO DOT */
 .logo{
-  font-family:'Space Grotesk';
-  font-size:1.3rem;
-  font-weight:700;
-  margin-bottom:3rem;
+    width:48px;
+    height:48px;
+
+    border-radius:999px;
+
+    background:linear-gradient(135deg,var(--purple),var(--cyan));
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-weight:700;
+    color:white;
+
+    margin-bottom:6px;
 }
 
-.logo span{
-  background:linear-gradient(135deg,var(--purple),var(--cyan));
-  -webkit-background-clip:text;
-  color:transparent;
+/* subtle glow */
+.sidebar::before{
+    content:'';
+    position:absolute;
+    inset:-40px;
+    background:radial-gradient(circle,rgba(139,92,246,.15),transparent 60%);
+    z-index:-1;
 }
 
-.nav-item{
-  padding:.8rem 1rem;
-  border-radius:12px;
-  margin-bottom:.5rem;
-  color:var(--muted);
-  cursor:pointer;
-  transition:.2s;
-}
-
-.nav-item:hover{
-  background:rgba(255,255,255,.05);
-  color:white;
-}
-
-/* MAIN */
-.main{
-  flex:1;
-  padding:2rem;
-  overflow:auto;
-}
-
-/* TOPBAR */
-.topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:2rem;
-}
-
-.welcome h1{
-  font-family:'Space Grotesk';
-  font-size:2rem;
-}
-
-.welcome p{
-  color:var(--muted);
-  margin-top:.3rem;
-}
-
-.user{
-  display:flex;
-  align-items:center;
-  gap:1rem;
-}
-
-.avatar{
-  width:40px;
-  height:40px;
-  border-radius:50%;
-  background:linear-gradient(135deg,var(--purple),var(--cyan));
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:700;
-}
-
-/* BUTTON */
-.btn{
-  padding:.6rem 1.2rem;
-  border-radius:999px;
-  border:1px solid var(--border);
-  background:rgba(255,255,255,.03);
-  color:white;
-  cursor:pointer;
-}
-
-/* STATS */
-.stats{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:1rem;
-  margin-bottom:2rem;
-}
-
-.card{
-  background:var(--glass);
-  border:1px solid var(--border);
-  border-radius:20px;
-  padding:1.5rem;
-  backdrop-filter:blur(20px);
-}
-
-.stat h2{
-  font-family:'Space Grotesk';
-  font-size:2rem;
-}
-
-.stat p{
-  color:var(--muted);
-}
-
-/* GRID */
-.grid{
-  display:grid;
-  grid-template-columns:2fr 1fr;
-  gap:1rem;
-}
-
-/* CHART BOX */
-.chart-box{
-  padding:1.5rem;
-  border-radius:20px;
-  background:var(--glass);
-  border:1px solid var(--border);
-  backdrop-filter:blur(20px);
-}
-
-/* RIGHT PANEL */
-.side-panel{
-  display:flex;
-  flex-direction:column;
-  gap:1rem;
-}
-
-.small-card{
-  padding:1.2rem;
-  border-radius:20px;
-  background:rgba(255,255,255,.04);
-  border:1px solid var(--border);
-}
-
-/* RESPONSIVE */
-@media(max-width:900px){
-  .stats{
-    grid-template-columns:1fr;
-  }
-  .grid{
-    grid-template-columns:1fr;
-  }
-  .sidebar{
-    display:none;
-  }
+/* RIGHT DEMO CONTENT */
+.content{
+    text-align:center;
+    opacity:.6;
 }
 
 </style>
@@ -217,156 +167,54 @@ body::before{
 
 <body>
 
-<div class="wrapper">
+<div class="sidebar">
 
-  <!-- SIDEBAR -->
-  <div class="sidebar">
-    <div class="logo">Observe<span>MD</span></div>
+    <div class="logo">OM</div>
 
-    <div class="nav-item">Dashboard</div>
-    <div class="nav-item">Hours</div>
-    <div class="nav-item">Reflections</div>
-    <div class="nav-item">Analytics</div>
-    <div class="nav-item">Export</div>
-  </div>
-
-  <!-- MAIN -->
-  <div class="main">
-
-    <!-- TOP -->
-    <div class="topbar">
-      <div class="welcome">
-        <h1 id="title">Welcome back</h1>
-        <p>Track your clinical journey</p>
-      </div>
-
-      <div class="user">
-        <div class="avatar" id="avatar">U</div>
-        <button class="btn" id="logout">Logout</button>
-      </div>
+    <div class="item active">
+        <div class="icon">🏠</div>
+        <div class="label">Dashboard</div>
     </div>
 
-    <!-- STATS -->
-    <div class="stats">
-
-      <div class="card stat">
-        <h2>24</h2>
-        <p>Total Hours</p>
-      </div>
-
-      <div class="card stat">
-        <h2>6</h2>
-        <p>Specialties</p>
-      </div>
-
-      <div class="card stat">
-        <h2>12</h2>
-        <p>Shadowing Days</p>
-      </div>
-
+    <div class="item">
+        <div class="icon">⏱️</div>
+        <div class="label">Hours</div>
     </div>
 
-    <!-- GRID -->
-    <div class="grid">
-
-      <!-- CHART -->
-      <div class="chart-box">
-        <h3 style="margin-bottom:1rem;font-family:Space Grotesk;">Hours Overview</h3>
-        <canvas id="chart"></canvas>
-      </div>
-
-      <!-- SIDE -->
-      <div class="side-panel">
-
-        <div class="small-card">
-          <h3>Upcoming Goals</h3>
-          <p style="color:#94a3b8;">Add 10 more shadowing hours this month.</p>
-        </div>
-
-        <div class="small-card">
-          <h3>Recent Activity</h3>
-          <p style="color:#94a3b8;">Logged Pediatrics session</p>
-        </div>
-
-        <div class="small-card">
-          <h3>Progress</h3>
-          <p style="color:#94a3b8;">You’re ahead of 78% of students</p>
-        </div>
-
-      </div>
-
+    <div class="item">
+        <div class="icon">🧠</div>
+        <div class="label">Reflections</div>
     </div>
 
-  </div>
+    <div class="item">
+        <div class="icon">📊</div>
+        <div class="label">Analytics</div>
+    </div>
+
+    <div class="item">
+        <div class="icon">🏥</div>
+        <div class="label">Specialties</div>
+    </div>
+
+    <div class="item">
+        <div class="icon">⚙️</div>
+        <div class="label">Settings</div>
+    </div>
+
 </div>
 
-<!-- FIREBASE -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+<div class="content">
+    Hover sidebar → expands smoothly
+</div>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDzGHoIe7hMutBTDLXcCwJ-3ADprK3M1NU",
-  authDomain: "observemd.firebaseapp.com",
-  projectId: "observemd",
-  storageBucket: "observemd.firebasestorage.app",
-  messagingSenderId: "125474110417",
-  appId: "1:125474110417:web:7b4366e2ec0eadcc313ef0",
-  measurementId: "G-V5DQGKC0XR"
-};
+<script>
+const items = document.querySelectorAll('.item');
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-/* AUTH */
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-  } else {
-    document.getElementById("title").innerText =
-      `Welcome back, ${user.displayName || "Student"}`;
-
-    document.getElementById("avatar").innerText =
-      (user.displayName || "U")[0].toUpperCase();
-  }
-});
-
-/* LOGOUT */
-document.getElementById("logout").addEventListener("click", async () => {
-  await signOut(auth);
-  window.location.href = "login.html";
-});
-
-/* CHART */
-const ctx = document.getElementById("chart");
-
-new Chart(ctx, {
-  type: "line",
-  data: {
-    labels: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
-    datasets: [{
-      label: "Hours",
-      data: [2,4,3,5,6,3,4],
-      borderColor: "#8b5cf6",
-      backgroundColor: "rgba(139,92,246,.2)",
-      tension: .4,
-      fill: true
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      legend: { display:false }
-    },
-    scales: {
-      x: { ticks: { color:"#94a3b8" }},
-      y: { ticks: { color:"#94a3b8" }}
-    }
-  }
+items.forEach(item => {
+    item.addEventListener('click', () => {
+        items.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+    });
 });
 </script>
 

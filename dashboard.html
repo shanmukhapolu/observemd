@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>ObserveMD • Dashboard</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+  --bg:#050816;
+  --muted:#94a3b8;
+  --purple:#8b5cf6;
+  --cyan:#06b6d4;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:white;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* glow background */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(139,92,246,.18), transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(6,182,212,.12), transparent 40%),
+    radial-gradient(circle at 50% 90%, rgba(139,92,246,.10), transparent 50%);
+  z-index:-1;
+}
+
+/* TOP BAR */
+.nav{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:2rem 3rem;
+}
+
+.logo{
+  font-family:'Space Grotesk';
+  font-size:1.3rem;
+  font-weight:700;
+}
+
+.logo span{
+  background:linear-gradient(135deg,var(--purple),var(--cyan));
+  -webkit-background-clip:text;
+  color:transparent;
+}
+
+.user{
+  display:flex;
+  align-items:center;
+  gap:1rem;
+}
+
+.avatar{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--purple),var(--cyan));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+}
+
+.btn{
+  padding:.7rem 1.2rem;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.03);
+  color:white;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.btn:hover{
+  background:rgba(255,255,255,.06);
+}
+
+/* HERO */
+.container{
+  padding:2rem 3rem;
+}
+
+.hero{
+  margin-top:2rem;
+}
+
+.hero h1{
+  font-family:'Space Grotesk';
+  font-size:3rem;
+}
+
+.hero p{
+  color:var(--muted);
+  margin-top:.5rem;
+}
+
+/* GRID */
+.grid{
+  margin-top:3rem;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+  gap:1.5rem;
+}
+
+.card{
+  padding:2rem;
+  border-radius:24px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  transition:.2s;
+}
+
+.card:hover{
+  transform:translateY(-5px);
+  border-color:rgba(139,92,246,.3);
+}
+
+.card h3{
+  font-family:'Space Grotesk';
+  margin-bottom:.5rem;
+}
+
+.card p{
+  color:var(--muted);
+  font-size:.95rem;
+}
+
+/* STATS */
+.stats{
+  margin-top:3rem;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1rem;
+}
+
+.stat{
+  padding:2rem;
+  border-radius:24px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.08);
+  text-align:center;
+}
+
+.stat h2{
+  font-family:'Space Grotesk';
+  font-size:2rem;
+}
+
+.stat p{
+  color:var(--muted);
+}
+
+/* RESPONSIVE */
+@media(max-width:800px){
+  .stats{
+    grid-template-columns:1fr;
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="logo">Observe<span>MD</span></div>
+
+  <div class="user">
+    <div class="avatar" id="avatar">U</div>
+    <button class="btn" id="logout">Logout</button>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="container">
+
+  <div class="hero">
+    <h1 id="welcome">Welcome back</h1>
+    <p>Track your clinical exposure, shadowing hours, and reflections.</p>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat">
+      <h2>0</h2>
+      <p>Total Hours</p>
+    </div>
+
+    <div class="stat">
+      <h2>0</h2>
+      <p>Shadowing Days</p>
+    </div>
+
+    <div class="stat">
+      <h2>0</h2>
+      <p>Specialties</p>
+    </div>
+  </div>
+
+  <!-- CARDS -->
+  <div class="grid">
+
+    <div class="card">
+      <h3>Log Hours</h3>
+      <p>Add new shadowing sessions and clinical experiences.</p>
+    </div>
+
+    <div class="card">
+      <h3>Reflections</h3>
+      <p>Write insights from your clinical observations.</p>
+    </div>
+
+    <div class="card">
+      <h3>Export</h3>
+      <p>Download your experience for applications.</p>
+    </div>
+
+    <div class="card">
+      <h3>Analytics</h3>
+      <p>See your progress across specialties.</p>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDzGHoIe7hMutBTDLXcCwJ-3ADprK3M1NU",
+  authDomain: "observemd.firebaseapp.com",
+  projectId: "observemd",
+  storageBucket: "observemd.firebasestorage.app",
+  messagingSenderId: "125474110417",
+  appId: "1:125474110417:web:7b4366e2ec0eadcc313ef0",
+  measurementId: "G-V5DQGKC0XR"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+/* ---------------- PROTECT ROUTE ---------------- */
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+  } else {
+    document.getElementById("welcome").innerText =
+      `Welcome back, ${user.displayName || "Student"}`;
+
+    document.getElementById("avatar").innerText =
+      (user.displayName || "U").charAt(0).toUpperCase();
+  }
+});
+
+/* ---------------- LOGOUT ---------------- */
+document.getElementById("logout").addEventListener("click", async () => {
+  await signOut(auth);
+  window.location.href = "login.html";
+});
+</script>
+
+</body>
+</html>

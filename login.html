@@ -303,6 +303,63 @@ body{
     </form>
 
 </div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
+const firebaseConfig = {
+  apiKey: "AIzaSyDzGHoIe7hMutBTDLXcCwJ-3ADprK3M1NU",
+  authDomain: "observemd.firebaseapp.com",
+  projectId: "observemd",
+  storageBucket: "observemd.firebasestorage.app",
+  messagingSenderId: "125474110417",
+  appId: "1:125474110417:web:7b4366e2ec0eadcc313ef0",
+  measurementId: "G-V5DQGKC0XR"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+const form = document.querySelector("form");
+const googleBtn = document.querySelector(".google");
+
+/* ---------------- EMAIL LOGIN ---------------- */
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const inputs = form.querySelectorAll("input");
+
+  const email = inputs[0].value;
+  const password = inputs[1].value;
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    window.location.href = "dashboard.html";
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+/* ---------------- GOOGLE LOGIN ---------------- */
+if (googleBtn) {
+  googleBtn.addEventListener("click", async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+
+      if (result.user) {
+        window.location.href = "dashboard.html";
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+</script>
 </body>
 </html>

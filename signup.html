@@ -337,6 +337,94 @@ body{
     </form>
 
 </div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
+// Your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDzGHoIe7hMutBTDLXcCwJ-3ADprK3M1NU",
+  authDomain: "observemd.firebaseapp.com",
+  projectId: "observemd",
+  storageBucket: "observemd.firebasestorage.app",
+  messagingSenderId: "125474110417",
+  appId: "1:125474110417:web:7b4366e2ec0eadcc313ef0",
+  measurementId: "G-V5DQGKC0XR"
+};
+
+// Init
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+// Detect page type
+const isSignup = document.querySelector("h2")?.innerText?.includes("Create");
+
+// ---------------- SIGNUP ----------------
+if (isSignup) {
+  const form = document.querySelector("form");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const inputs = form.querySelectorAll("input");
+
+    const email = inputs[1].value;
+    const password = inputs[2].value;
+
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  document.querySelector(".google").addEventListener("click", async () => {
+    try {
+      await signInWithPopup(auth, provider);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+// ---------------- LOGIN ----------------
+if (!isSignup) {
+  const form = document.querySelector("form");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const inputs = form.querySelectorAll("input");
+
+    const email = inputs[0].value;
+    const password = inputs[1].value;
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  document.querySelector(".google").addEventListener("click", async () => {
+    try {
+      await signInWithPopup(auth, provider);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+</script>
 </body>
 </html>

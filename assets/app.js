@@ -289,6 +289,16 @@ const OMD = (() => {
         <a class="nav-item ${active === "settings" ? "active" : ""}" href="settings.html" data-nav="settings">
           <i data-lucide="settings"></i>Settings
         </a>
+        <div class="sidebar-user">
+          <div class="sb-avatar" id="sbUserAvatar">S</div>
+          <div class="sb-user-meta">
+            <div class="sb-user-name" id="sbUserName">Loading…</div>
+            <div class="sb-user-email" id="sbUserEmail"></div>
+          </div>
+          <button class="sb-signout" id="sbSignOut" title="Sign out" aria-label="Sign out">
+            <i data-lucide="log-out"></i>
+          </button>
+        </div>
       </aside>`;
 
     document.body.insertAdjacentHTML("afterbegin", html);

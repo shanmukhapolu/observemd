@@ -3,10 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Floating Sidebar</title>
+<title>Dashboard Sidebar</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
 
 <style>
 
@@ -22,7 +25,6 @@
     --cyan:#06b6d4;
 }
 
-/* BASE */
 *{
     margin:0;
     padding:0;
@@ -34,12 +36,9 @@ body{
     background:var(--bg);
     height:100vh;
     display:flex;
-    align-items:center;
-    justify-content:center;
-    color:white;
 }
 
-/* SIDEBAR WRAPPER */
+/* SIDEBAR */
 .sidebar{
     position:fixed;
     left:20px;
@@ -57,78 +56,19 @@ body{
 
     display:flex;
     flex-direction:column;
-    gap:12px;
+    gap:10px;
 
-    transition:width .35s ease, border-radius .35s ease;
+    transition:all .35s ease;
     overflow:hidden;
 }
 
-/* EXPAND ON HOVER */
+/* EXPAND */
 .sidebar:hover{
     width:220px;
     border-radius:28px;
 }
 
-/* ITEM */
-.item{
-    display:flex;
-    align-items:center;
-    gap:14px;
-
-    padding:12px;
-    border-radius:999px;
-
-    cursor:pointer;
-    transition:.2s;
-
-    color:var(--muted);
-    user-select:none;
-}
-
-/* hover highlight */
-.item:hover{
-    background:var(--glass2);
-    color:white;
-}
-
-/* ACTIVE STATE */
-.item.active{
-    background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(6,182,212,.15));
-    color:white;
-}
-
-/* ICON */
-.icon{
-    min-width:48px;
-    height:48px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    border-radius:999px;
-
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.08);
-
-    font-size:18px;
-}
-
-/* LABEL (HIDDEN UNTIL EXPAND) */
-.label{
-    opacity:0;
-    transform:translateX(-10px);
-    transition:.25s ease;
-    white-space:nowrap;
-}
-
-/* SHOW LABEL ON HOVER */
-.sidebar:hover .label{
-    opacity:1;
-    transform:translateX(0);
-}
-
-/* TOP LOGO DOT */
+/* LOGO */
 .logo{
     width:48px;
     height:48px;
@@ -141,10 +81,74 @@ body{
     align-items:center;
     justify-content:center;
 
-    font-weight:700;
+    font-weight:600;
     color:white;
 
     margin-bottom:6px;
+}
+
+/* ITEM */
+.item{
+    display:flex;
+    align-items:center;
+    gap:14px;
+
+    padding:12px;
+
+    border-radius:999px;
+
+    cursor:pointer;
+
+    color:var(--muted);
+
+    transition:.2s;
+}
+
+.item:hover{
+    background:var(--glass2);
+    color:white;
+}
+
+.item.active{
+    background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(6,182,212,.15));
+    color:white;
+}
+
+/* ICON WRAPPER */
+.icon{
+    width:48px;
+    height:48px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border-radius:999px;
+
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+}
+
+/* LABEL */
+.label{
+    opacity:0;
+    transform:translateX(-8px);
+    transition:.25s ease;
+    white-space:nowrap;
+    font-size:.95rem;
+}
+
+/* SHOW LABEL ON HOVER */
+.sidebar:hover .label{
+    opacity:1;
+    transform:translateX(0);
+}
+
+/* ICON SIZE */
+svg{
+    width:20px;
+    height:20px;
+    stroke-width:1.8;
 }
 
 /* subtle glow */
@@ -154,12 +158,6 @@ body{
     inset:-40px;
     background:radial-gradient(circle,rgba(139,92,246,.15),transparent 60%);
     z-index:-1;
-}
-
-/* RIGHT DEMO CONTENT */
-.content{
-    text-align:center;
-    opacity:.6;
 }
 
 </style>
@@ -172,42 +170,40 @@ body{
     <div class="logo">OM</div>
 
     <div class="item active">
-        <div class="icon">🏠</div>
+        <div class="icon" data-lucide="layout-dashboard"></div>
         <div class="label">Dashboard</div>
     </div>
 
     <div class="item">
-        <div class="icon">⏱️</div>
+        <div class="icon" data-lucide="clock"></div>
         <div class="label">Hours</div>
     </div>
 
     <div class="item">
-        <div class="icon">🧠</div>
+        <div class="icon" data-lucide="book-open"></div>
         <div class="label">Reflections</div>
     </div>
 
     <div class="item">
-        <div class="icon">📊</div>
+        <div class="icon" data-lucide="bar-chart-3"></div>
         <div class="label">Analytics</div>
     </div>
 
     <div class="item">
-        <div class="icon">🏥</div>
-        <div class="label">Specialties</div>
+        <div class="icon" data-lucide="building-2"></div>
+        <div class="label">Hospitals</div>
     </div>
 
     <div class="item">
-        <div class="icon">⚙️</div>
+        <div class="icon" data-lucide="settings"></div>
         <div class="label">Settings</div>
     </div>
 
 </div>
 
-<div class="content">
-    Hover sidebar → expands smoothly
-</div>
-
 <script>
+lucide.createIcons();
+
 const items = document.querySelectorAll('.item');
 
 items.forEach(item => {

@@ -3,21 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ObserveMD Sidebar</title>
+
+<title>ObserveMD Dashboard</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://unpkg.com/lucide@latest"></script>
 
 <style>
 :root{
-    --bg:#050816;
-    --sidebar:rgba(255,255,255,.04);
-    --border:rgba(255,255,255,.08);
+    --bg:#0b0c1f;
+    --panel:#111226;
+    --panel2:#17192f;
 
-    --text:#e5e7eb;
-    --muted:#94a3b8;
+    --text:#ffffff;
+    --muted:#8d92b3;
 
     --purple:#8b5cf6;
     --cyan:#06b6d4;
@@ -31,200 +32,376 @@
 }
 
 body{
-    background:var(--bg);
+    background:#2f3140;
     min-height:100vh;
-    color:var(--text);
+    padding:40px;
+}
+
+/* MAIN CONTAINER */
+
+.dashboard{
+    background:var(--bg);
+    border-radius:32px;
+    height:calc(100vh - 80px);
+    overflow:hidden;
+    display:flex;
+    box-shadow:
+    0 30px 80px rgba(0,0,0,.35);
 }
 
 /* SIDEBAR */
+
 .sidebar{
-    position:fixed;
-    top:16px;
-    left:16px;
+    width:88px;
+    background:rgba(8,10,25,.8);
 
-    width:68px;
-    height:calc(100vh - 32px);
-
-    padding:8px;
-
-    background:var(--sidebar);
-    border:1px solid var(--border);
-    backdrop-filter:blur(20px);
-
-    border-radius:22px;
+    border-right:1px solid rgba(255,255,255,.05);
 
     display:flex;
     flex-direction:column;
-
-    transition:width .3s ease;
-    overflow:hidden;
-}
-
-/* EXPAND */
-.sidebar:hover{
-    width:220px;
-}
-
-/* BRAND */
-.logo{
-    height:52px;
-
-    display:flex;
     align-items:center;
 
-    padding:0 14px;
-    margin-bottom:10px;
+    padding:24px 0;
 
-    font-size:1rem;
-    font-weight:600;
+    transition:.3s ease;
+}
+
+.sidebar:hover{
+    width:240px;
+}
+
+.logo{
+    width:100%;
+    padding:0 26px 30px;
+
+    color:white;
+    font-size:1.25rem;
+    font-weight:700;
 
     white-space:nowrap;
-    flex-shrink:0;
 }
 
 .logo span{
-    background:linear-gradient(135deg,var(--purple),var(--cyan));
+    background:linear-gradient(
+        135deg,
+        var(--purple),
+        var(--cyan)
+    );
+
     -webkit-background-clip:text;
     -webkit-text-fill-color:transparent;
 }
 
-/* NAV ITEMS */
+.nav{
+    width:100%;
+}
+
 .item{
-    height:44px;
+    position:relative;
+
+    height:58px;
 
     display:flex;
     align-items:center;
-    gap:14px;
 
-    padding:0 14px;
+    gap:18px;
 
-    border-radius:12px;
+    padding:0 32px;
 
-    cursor:pointer;
     color:var(--muted);
 
-    transition:.2s ease;
+    cursor:pointer;
+
+    transition:.25s;
 }
 
 .item:hover{
-    background:rgba(255,255,255,.05);
     color:white;
 }
 
 .item.active{
-    background:rgba(139,92,246,.15);
     color:white;
 }
 
-/* ICON */
-.icon{
-    width:20px;
-    min-width:20px;
+.item.active::before{
+    content:"";
 
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    position:absolute;
+
+    left:0;
+    top:12px;
+
+    width:3px;
+    height:34px;
+
+    border-radius:99px;
+
+    background:linear-gradient(
+        to bottom,
+        var(--purple),
+        var(--cyan)
+    );
 }
 
-/* LABEL */
+.icon{
+    min-width:20px;
+}
+
 .label{
     opacity:0;
-    width:0;
+    transform:translateX(-8px);
 
-    overflow:hidden;
+    transition:.25s;
+
     white-space:nowrap;
-
-    transition:.2s ease;
-
-    font-size:.92rem;
-    font-weight:500;
 }
 
 .sidebar:hover .label{
     opacity:1;
-    width:auto;
+    transform:none;
 }
 
-/* PUSH SETTINGS DOWN */
 .spacer{
     flex:1;
 }
 
-/* ICON SIZE */
 svg{
-    width:18px;
-    height:18px;
+    width:20px;
+    height:20px;
     stroke-width:2;
 }
 
-/* SUBTLE GLOW */
-.sidebar::before{
-    content:"";
-    position:absolute;
-    inset:-80px;
+/* CONTENT */
+
+.content{
+    flex:1;
+    padding:40px;
+}
+
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    margin-bottom:32px;
+}
+
+.title h1{
+    color:white;
+    font-size:2rem;
+}
+
+.title p{
+    color:var(--muted);
+    margin-top:6px;
+}
+
+.search{
+    width:320px;
+    height:52px;
+
+    border:none;
+    outline:none;
+
+    padding:0 18px;
+
+    border-radius:16px;
+
+    background:var(--panel);
+    color:white;
+}
+
+/* CARDS */
+
+.grid{
+    display:grid;
+    gap:24px;
+
+    grid-template-columns:
+    repeat(auto-fit,minmax(280px,1fr));
+}
+
+.card{
+    background:
+    linear-gradient(
+        135deg,
+        rgba(139,92,246,.12),
+        rgba(255,255,255,.03)
+    );
+
+    border:1px solid rgba(255,255,255,.05);
+
+    border-radius:24px;
+
+    padding:28px;
+
+    min-height:180px;
+}
+
+.card h3{
+    color:#c7caf0;
+    margin-bottom:12px;
+}
+
+.metric{
+    color:white;
+    font-size:2rem;
+    font-weight:700;
+}
+
+.sub{
+    color:var(--muted);
+    margin-top:10px;
+}
+
+.large{
+    min-height:350px;
+    grid-column:span 2;
+}
+
+.chart-placeholder{
+    height:250px;
+    margin-top:20px;
+
+    border-radius:20px;
 
     background:
-        radial-gradient(
-            circle at top left,
-            rgba(139,92,246,.15),
-            transparent 45%
-        );
+    linear-gradient(
+        180deg,
+        rgba(139,92,246,.3),
+        rgba(139,92,246,.02)
+    );
+}
 
-    z-index:-1;
+/* MOBILE */
+
+@media(max-width:900px){
+
+    body{
+        padding:0;
+    }
+
+    .dashboard{
+        border-radius:0;
+        height:100vh;
+    }
+
+    .large{
+        grid-column:auto;
+    }
+
+    .search{
+        display:none;
+    }
 }
 </style>
 </head>
 <body>
 
-<div class="sidebar">
+<div class="dashboard">
 
-    <div class="logo">
-        <span>ObserveMD</span>
-    </div>
+    <aside class="sidebar">
 
-    <div class="item active">
-        <div class="icon" data-lucide="layout-dashboard"></div>
-        <div class="label">Dashboard</div>
-    </div>
+        <div class="logo">
+            <span>ObserveMD</span>
+        </div>
 
-    <div class="item">
-        <div class="icon" data-lucide="clock-3"></div>
-        <div class="label">Hours</div>
-    </div>
+        <nav class="nav">
 
-    <div class="item">
-        <div class="icon" data-lucide="book-open"></div>
-        <div class="label">Reflections</div>
-    </div>
+            <div class="item active">
+                <div class="icon" data-lucide="layout-dashboard"></div>
+                <div class="label">Dashboard</div>
+            </div>
 
-    <div class="item">
-        <div class="icon" data-lucide="bar-chart-3"></div>
-        <div class="label">Analytics</div>
-    </div>
+            <div class="item">
+                <div class="icon" data-lucide="clock-3"></div>
+                <div class="label">Hours</div>
+            </div>
 
-    <div class="item">
-        <div class="icon" data-lucide="building-2"></div>
-        <div class="label">Hospitals</div>
-    </div>
+            <div class="item">
+                <div class="icon" data-lucide="book-open"></div>
+                <div class="label">Reflections</div>
+            </div>
 
-    <div class="spacer"></div>
+            <div class="item">
+                <div class="icon" data-lucide="bar-chart-3"></div>
+                <div class="label">Analytics</div>
+            </div>
 
-    <div class="item">
-        <div class="icon" data-lucide="settings"></div>
-        <div class="label">Settings</div>
-    </div>
+            <div class="item">
+                <div class="icon" data-lucide="building-2"></div>
+                <div class="label">Hospitals</div>
+            </div>
+
+        </nav>
+
+        <div class="spacer"></div>
+
+        <div class="item">
+            <div class="icon" data-lucide="settings"></div>
+            <div class="label">Settings</div>
+        </div>
+
+    </aside>
+
+    <main class="content">
+
+        <div class="header">
+
+            <div class="title">
+                <h1>Dashboard</h1>
+                <p>Medical education progress overview</p>
+            </div>
+
+            <input
+                class="search"
+                placeholder="Search..."
+            >
+        </div>
+
+        <div class="grid">
+
+            <div class="card">
+                <h3>Total Hours</h3>
+                <div class="metric">1,248</div>
+                <div class="sub">+12% this month</div>
+            </div>
+
+            <div class="card">
+                <h3>Reflections</h3>
+                <div class="metric">342</div>
+                <div class="sub">28 pending review</div>
+            </div>
+
+            <div class="card">
+                <h3>Hospitals</h3>
+                <div class="metric">17</div>
+                <div class="sub">Across 4 rotations</div>
+            </div>
+
+            <div class="card large">
+                <h3>Learning Analytics</h3>
+                <div class="chart-placeholder"></div>
+            </div>
+
+        </div>
+
+    </main>
 
 </div>
 
 <script>
 lucide.createIcons();
 
-const items = document.querySelectorAll('.item');
+const items = document.querySelectorAll(".item");
 
 items.forEach(item => {
-    item.addEventListener('click', () => {
-        items.forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
+    item.addEventListener("click", () => {
+        document
+            .querySelectorAll(".item")
+            .forEach(i => i.classList.remove("active"));
+
+        item.classList.add("active");
     });
 });
 </script>

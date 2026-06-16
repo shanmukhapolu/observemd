@@ -442,23 +442,37 @@ const OMD = (() => {
     });
   }
 
-  // Render gradient text on a hidden canvas and return a data URL
-  function _gradientTextImg(text, fontSize, colors) {
+  // Render the full "ObserveMD" wordmark on a canvas so both "Observe" and "MD"
+  // are in Space Grotesk, perfectly baseline-aligned, with MD in the brand gradient.
+  // Returns { dataUrl, pxW, pxH } at logical (non-scaled) pixel dimensions.
+  function _wordmarkImg(fontSize) {
+    const scale = 3;
+    const fs = fontSize * scale;
+    const fontStr = `bold ${fs}px "Space Grotesk","Helvetica Neue",Helvetica,Arial,sans-serif`;
+    const tmp = document.createElement("canvas");
+    const tCtx = tmp.getContext("2d");
+    tCtx.font = fontStr;
+    const obsW = tCtx.measureText("Observe").width;
+    const mdW  = tCtx.measureText("MD").width;
+    const totalW = obsW + mdW + 2;
+    const h = Math.ceil(fs * 1.35);
     const c = document.createElement("canvas");
-    const scale = 3; // retina
-    c.height = Math.ceil(fontSize * scale * 1.4);
+    c.width  = Math.ceil(totalW) + 4;
+    c.height = h;
     const ctx = c.getContext("2d");
-    ctx.font = `bold ${fontSize * scale}px "Space Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif`;
-    const tw = ctx.measureText(text).width;
-    c.width = Math.ceil(tw) + 4;
-    ctx.font = `bold ${fontSize * scale}px "Space Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif`;
-    const grad = ctx.createLinearGradient(0, 0, c.width, 0);
-    grad.addColorStop(0, colors[0]);
-    grad.addColorStop(1, colors[1]);
+    ctx.font = fontStr;
+    ctx.textBaseline = "alphabetic";
+    const baseline = Math.ceil(fs * 1.0); // baseline position within canvas
+    // "Observe" — dark ink colour for white PDF background
+    ctx.fillStyle = "#1e2030";
+    ctx.fillText("Observe", 2, baseline);
+    // "MD" — brand gradient purple→cyan
+    const grad = ctx.createLinearGradient(obsW + 2, 0, obsW + 2 + mdW, 0);
+    grad.addColorStop(0, "#8b5cf6");
+    grad.addColorStop(1, "#06b6d4");
     ctx.fillStyle = grad;
-    ctx.textBaseline = "top";
-    ctx.fillText(text, 2, 0);
-    return { dataUrl: c.toDataURL("image/png"), pxW: c.width / scale, pxH: c.height / scale };
+    ctx.fillText("MD", obsW + 2, baseline);
+    return { dataUrl: c.toDataURL("image/png"), pxW: c.width / scale, pxH: h / scale, baseline: baseline / scale };
   }
 
   // Load a URL as a base64 data URL (for the logo PNG)
@@ -494,157 +508,153 @@ const OMD = (() => {
     const M = 56;
     let y = 0;
 
-    // Brand colours (dark theme)
-    const purple = [139, 92, 246], cyan = [6, 182, 212];
-    const bg = [10, 11, 15], card = [18, 21, 32], muted = [100, 116, 139];
-    const white = [248, 250, 252], bodyText = [190, 198, 215], subText = [160, 170, 190];
+    // Light theme palette — white background, dark text, purple accent, gradient only in brand elements
+    const purple   = [139, 92, 246];   // #8b5cf6 — accent only (headings, underlines)
+    const ink      = [30, 32, 48];     // near-black for headings / name
+    const body     = [70, 78, 100];    // body text
+    const muted    = [140, 148, 168];  // captions, labels
+    const border   = [220, 224, 236];  // card/rule borders
+    const white    = [255, 255, 255];
+    const pageBg   = [250, 250, 252];  // very slight off-white page
 
-    // Pre-render gradient "MD" images at sizes we need
-    const GRAD = ["#8b5cf6", "#06b6d4"];
-    const mdLarge  = _gradientTextImg("MD", 28, GRAD); // cover top-left
-    const mdSmall  = _gradientTextImg("MD",  8, GRAD); // footer
-    const mdMedium = _gradientTextImg("MD",  9, GRAD); // cover bottom
+    // Pre-render wordmark images at the sizes used in the PDF
+    const wmLarge  = _wordmarkImg(24);  // cover header
+    const wmSmall  = _wordmarkImg(8);   // page footer
+    const wmMedium = _wordmarkImg(10);  // cover footer line
 
-    // Load logo PNG as data URL
+    // Load purple logo PNG for the PDF (suits white/light background)
     let logoDataUrl = null;
-    try { logoDataUrl = await _fetchImgDataUrl("assets/logo-white.png"); } catch { /* skip if unavailable */ }
+    try { logoDataUrl = await _fetchImgDataUrl("assets/logo-purple.png"); } catch { /* skip */ }
 
-    // Draw the full "ObserveMD" wordmark: logo icon + "Observe" in white + "MD" gradient image
-    function drawWordmark(xPos, yPos, fontSize, imgCache) {
-      const iconSize = fontSize * 1.2;
+    // Place the logo icon + wordmark image at (xPos, baselineY)
+    function drawWordmark(xPos, baselineY, wm) {
+      const iconSize = wm.pxH * 1.1;
       if (logoDataUrl) {
-        doc.addImage(logoDataUrl, "PNG", xPos, yPos - iconSize * 0.82, iconSize, iconSize);
-        xPos += iconSize + 4;
+        doc.addImage(logoDataUrl, "PNG", xPos, baselineY - iconSize * 0.85, iconSize, iconSize);
+        xPos += iconSize + 5;
       }
-      doc.setFont("helvetica","bold"); doc.setFontSize(fontSize);
-      doc.setTextColor(...white);
-      doc.text("Observe", xPos, yPos);
-      const obsW = doc.getTextWidth("Observe");
-      const img = imgCache;
-      // addImage: x, y are top-left; text baseline is approx 80% down the cap height
-      const imgH = img.pxH;
-      const imgW = img.pxW;
-      const scale = (fontSize * 1.15) / imgH;
-      doc.addImage(img.dataUrl, "PNG", xPos + obsW, yPos - imgH * scale * 0.85, imgW * scale, imgH * scale);
+      // Place canvas image so its baseline aligns with baselineY
+      const imgTop = baselineY - wm.baseline;
+      doc.addImage(wm.dataUrl, "PNG", xPos, imgTop, wm.pxW, wm.pxH);
+      return xPos + wm.pxW; // return right edge x
     }
 
-    /* ---- helper fns ---- */
-    function footer(label) {
-      doc.setFont("helvetica","bold"); doc.setFontSize(8);
-      doc.setTextColor(...white);
-      const footY = H - 20;
-      doc.text("Observe", M, footY, { baseline:"bottom" });
-      const pw = doc.getTextWidth("Observe");
-      const imgH = mdSmall.pxH, imgW = mdSmall.pxW;
-      const scale = (8 * 1.15) / imgH;
-      doc.addImage(mdSmall.dataUrl, "PNG", M + pw, footY - imgH * scale, imgW * scale, imgH * scale);
-      const mdTotalW = imgW * scale;
-      doc.setTextColor(...muted); doc.setFont("helvetica","normal");
-      doc.text("  •  " + (prof.name || ""), M + pw + mdTotalW, footY, { baseline:"bottom" });
-      doc.text(label, W - M, footY, { align: "right", baseline:"bottom" });
-      // Hairline separator
-      doc.setDrawColor(35, 40, 58); doc.setLineWidth(0.5);
-      doc.line(M, H - 28, W - M, H - 28);
-    }
-
-    function newPage(title) {
-      doc.addPage(); y = M;
-      // Gradient accent bar — simulate with steps
-      const steps = 24;
+    // Gradient bar helper — smooth purple→cyan strip
+    function gradBar(yTop, barH) {
+      const steps = 32;
       for (let i = 0; i < steps; i++) {
         const t = i / (steps - 1);
         const r = Math.round(139 + (6  - 139) * t);
         const g = Math.round(92  + (182 - 92)  * t);
         const b = Math.round(246 + (212 - 246) * t);
         doc.setFillColor(r, g, b);
-        doc.rect((W / steps) * i, 0, W / steps + 1, 5, "F");
+        doc.rect((W / steps) * i, yTop, W / steps + 1, barH, "F");
       }
-      // Dark page background hint
-      doc.setFillColor(...bg); doc.rect(0, 5, W, H - 5, "F");
+    }
+
+    /* ---- helper fns ---- */
+    function footer(label) {
+      // Hairline separator
+      doc.setDrawColor(...border); doc.setLineWidth(0.5);
+      doc.line(M, H - 30, W - M, H - 30);
+      const footY = H - 16;
+      // Logo icon + wordmark
+      const rightEdge = drawWordmark(M, footY, wmSmall);
+      // Separator dot + name
+      doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...muted);
+      doc.text("  •  " + (prof.name || ""), rightEdge, footY, { baseline:"bottom" });
+      doc.text(label, W - M, footY, { align: "right", baseline:"bottom" });
+    }
+
+    function newPage(title) {
+      doc.addPage(); y = M;
+      // White page background
+      doc.setFillColor(...pageBg); doc.rect(0, 0, W, H, "F");
+      // Thin gradient accent bar at top
+      gradBar(0, 5);
+      // Logo top-right on every interior page
+      if (logoDataUrl) {
+        const iconS = 18;
+        doc.addImage(logoDataUrl, "PNG", W - M - iconS, 10, iconS, iconS);
+      }
       // Section title
-      doc.setFont("helvetica","bold"); doc.setFontSize(18);
-      doc.setTextColor(...purple); doc.text(title, M, y + 6); y += 16;
-      doc.setDrawColor(...purple); doc.setLineWidth(1.5);
-      doc.line(M, y, M + 48, y); y += 28;
+      doc.setFont("helvetica","bold"); doc.setFontSize(17);
+      doc.setTextColor(...ink); doc.text(title, M, y + 4); y += 16;
+      // Purple underline
+      doc.setDrawColor(...purple); doc.setLineWidth(2);
+      doc.line(M, y, M + 40, y); y += 26;
     }
 
     function ensure(space, title) { if (y + space > H - 60) { footer(title); newPage(title + " (cont.)"); } }
 
     function heading(t) {
-      ensure(42, t); doc.setFont("helvetica","bold"); doc.setFontSize(11);
-      doc.setTextColor(...cyan); doc.text(t, M, y); y += 18;
+      ensure(42, t);
+      doc.setFont("helvetica","bold"); doc.setFontSize(10.5);
+      doc.setTextColor(...purple); doc.text(t, M, y); y += 17;
     }
 
     function para(t, size = 10, gap = 5) {
       doc.setFont("helvetica","normal"); doc.setFontSize(size);
-      doc.setTextColor(...bodyText);
+      doc.setTextColor(...body);
       const lines = doc.splitTextToSize(t, W - M * 2);
       lines.forEach(ln => { ensure(size + gap, "Portfolio"); doc.text(ln, M, y); y += size + gap; });
     }
 
     /* ---- Cover page ---- */
-    // Dark background
-    doc.setFillColor(...bg); doc.rect(0, 0, W, H, "F");
+    doc.setFillColor(...white); doc.rect(0, 0, W, H, "F");
 
-    // Gradient top bar (simulated with colour steps)
-    const steps = 32;
-    for (let i = 0; i < steps; i++) {
-      const t = i / (steps - 1);
-      const r = Math.round(139 + (6  - 139) * t);
-      const g = Math.round(92  + (182 - 92)  * t);
-      const b = Math.round(246 + (212 - 246) * t);
-      doc.setFillColor(r, g, b);
-      doc.rect((W / steps) * i, 0, W / steps + 1, 12, "F");
-    }
+    // Gradient top bar — full width, 14 pt tall
+    gradBar(0, 14);
 
-    // ObserveMD wordmark — logo icon + "Observe" white + "MD" gradient
-    const logoY = 60;
-    drawWordmark(M, logoY, 28, mdLarge);
+    // ObserveMD wordmark (large) below the bar
+    const logoY = 58;
+    const wmRightEdge = drawWordmark(M, logoY, wmLarge);
 
-    doc.setFont("helvetica","normal"); doc.setFontSize(10);
+    // Subtitle tag
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
     doc.setTextColor(...muted);
-    doc.text("HEALTHCARE OBSERVATION PORTFOLIO", M, logoY + 18);
+    doc.text("HEALTHCARE OBSERVATION PORTFOLIO", M, logoY + 16);
 
-    // Divider line under wordmark
-    doc.setDrawColor(40, 46, 66); doc.setLineWidth(0.75);
-    doc.line(M, logoY + 30, W - M, logoY + 30);
+    // Divider
+    doc.setDrawColor(...border); doc.setLineWidth(0.75);
+    doc.line(M, logoY + 28, W - M, logoY + 28);
 
     // Student name + meta
-    const nameY = 170;
+    const nameY = 160;
     doc.setFont("helvetica","bold"); doc.setFontSize(30);
-    doc.setTextColor(...white); doc.text(prof.name || "Student", M, nameY);
-    doc.setFont("helvetica","normal"); doc.setFontSize(11); doc.setTextColor(...muted);
+    doc.setTextColor(...ink); doc.text(prof.name || "Student", M, nameY);
+    doc.setFont("helvetica","normal"); doc.setFontSize(10.5); doc.setTextColor(...muted);
     const metaLine = [prof.school, prof.goal, prof.gradYear ? "Class of " + prof.gradYear : ""].filter(Boolean).join("  •  ");
-    if (metaLine) doc.text(metaLine, M, nameY + 22);
+    if (metaLine) doc.text(metaLine, M, nameY + 20);
 
-    // Stat cards on cover
-    const cover = [
+    // Stat cards — light card style
+    const coverStats = [
       ["Total Hours",   a.totalHours + " hrs"],
       ["Observations",  String(a.sessions)],
       ["Specialties",   String(a.specialtiesCount)],
       ["Reflections",   String(a.respCount)],
     ];
-    let cx = M, cy = 250;
-    cover.forEach(c => {
-      doc.setFillColor(21, 24, 38); doc.setDrawColor(40, 46, 66);
-      doc.roundedRect(cx, cy, 110, 76, 8, 8, "FD");
-      doc.setTextColor(...cyan); doc.setFont("helvetica","bold"); doc.setFontSize(20);
-      doc.text(c[1], cx + 13, cy + 36);
-      doc.setTextColor(...muted); doc.setFont("helvetica","normal"); doc.setFontSize(8);
-      doc.text(c[0].toUpperCase(), cx + 13, cy + 56);
+    let cx = M, cy = 236;
+    coverStats.forEach(c => {
+      doc.setFillColor(245, 245, 250); doc.setDrawColor(...border);
+      doc.roundedRect(cx, cy, 110, 70, 7, 7, "FD");
+      doc.setTextColor(...purple); doc.setFont("helvetica","bold"); doc.setFontSize(20);
+      doc.text(c[1], cx + 12, cy + 32);
+      doc.setTextColor(...muted); doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
+      doc.text(c[0].toUpperCase(), cx + 12, cy + 50);
       cx += 120;
     });
 
     // Generated date
-    doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...muted);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...muted);
     doc.text("Generated " + new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}), M, H - 44);
 
     // Footer wordmark on cover
-    drawWordmark(M, H - 28, 9, mdMedium);
+    drawWordmark(M, H - 26, wmMedium);
 
     /* ---- Professional Summary ---- */
     newPage("Professional Summary");
-    doc.setTextColor(200, 208, 225);
+    doc.setTextColor(...body);
     para(`${prof.name || "This student"} is a ${prof.goal || "pre-health"} student at ${prof.school || "their institution"} pursuing a future in healthcare. Through the ObserveMD platform, ${(prof.name||"they").split(" ")[0]} has documented ${a.totalHours} hours across ${a.sessions} structured observation sessions spanning ${a.specialtiesCount} medical specialties and ${a.providersCount} healthcare providers.`, 11, 7);
     y += 6;
     para(`The most explored specialty is ${a.topSpec ? a.topSpec[0] : "n/a"}, and reflective writing across these sessions totals ${a.totalWords.toLocaleString()} words with an average of ${a.avgReflection} words per response. This portfolio demonstrates sustained commitment, breadth of clinical exposure, and a consistent practice of structured reflection.`, 11, 7);
@@ -665,7 +675,7 @@ const OMD = (() => {
     const maxSpec = Math.max(...specSorted.map(s => s[1]), 1);
     specSorted.forEach(([s, hrs]) => {
       ensure(22, "Analytics");
-      doc.setFontSize(9); doc.setTextColor(160, 170, 190);
+      doc.setFontSize(9); doc.setTextColor(...body);
       doc.text(s, M, y + 8);
       const bw = (hrs / maxSpec) * 200;
       doc.setFillColor(...purple); doc.roundedRect(M + 180, y, Math.max(bw, 2), 9, 2, 2, "F");
@@ -684,9 +694,10 @@ const OMD = (() => {
     const maxW = Math.max(...wm.map(m=>m[1]), 1);
     wm.forEach(([k,v]) => {
       ensure(20, "Growth");
-      doc.setFontSize(9); doc.setTextColor(160,170,190); doc.text(monthLabel(k), M, y+8);
+      doc.setFontSize(9); doc.setTextColor(...body); doc.text(monthLabel(k), M, y+8);
       const bww = (v/maxW)*220;
-      doc.setFillColor(...cyan); doc.roundedRect(M+80, y, Math.max(bww,2), 9, 2, 2, "F");
+      // Use purple for the growth bars — gradient only lives in the wordmark/bar
+      doc.setFillColor(...purple); doc.roundedRect(M+80, y, Math.max(bww,2), 9, 2, 2, "F");
       doc.setTextColor(...muted); doc.text(v + " w", M+90+bww, y+8);
       y += 18;
     });
@@ -710,7 +721,7 @@ const OMD = (() => {
     highlights.forEach(o => {
       heading(`${o.specialty} — ${fmtDate(o.date)}`);
       para("Q: How did this experience influence your understanding of healthcare?", 9, 5);
-      doc.setTextColor(160,170,195);
+      doc.setTextColor(...body);
       para(`"${o.reflections[4]||o.reflections[0]||""}"`, 10, 6);
       y += 6;
     });
@@ -719,12 +730,12 @@ const OMD = (() => {
     newPage("Complete Observation Log");
     a.list.forEach((o, idx) => {
       ensure(70, "Observation Log");
-      doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...purple);
+      doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...ink);
       doc.text(`${idx+1}. ${o.specialty}`, M, y);
       doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...muted);
       doc.text(`${fmtDate(o.date)}  •  ${o.hours} hrs`, W-M, y, {align:"right"});
       y += 15;
-      doc.setTextColor(160,170,190); doc.setFontSize(9);
+      doc.setTextColor(...body); doc.setFontSize(9);
       doc.text(`${o.providerName}, ${o.providerTitle}  —  ${o.location}  (${o.startTime}–${o.endTime})`, M, y);
       y += 14;
       para(o.notes||"", 9, 5);
@@ -735,14 +746,14 @@ const OMD = (() => {
     newPage("Reflection Archive");
     a.list.forEach(o => {
       ensure(60, "Reflection Archive");
-      doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...purple);
+      doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...ink);
       doc.text(`${o.specialty} — ${fmtDate(o.date)}`, M, y); y += 16;
       REFLECTION_QUESTIONS.forEach((q, qi) => {
         ensure(40, "Reflection Archive");
-        doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(90,100,120);
+        doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...muted);
         const ql = doc.splitTextToSize(`Q${qi+1}. ${q}`, W-M*2);
         ql.forEach(l => { doc.text(l, M, y); y += 12; });
-        doc.setFont("helvetica","normal"); doc.setTextColor(160,170,195);
+        doc.setFont("helvetica","normal"); doc.setTextColor(...body);
         para(o.reflections[qi]||"—", 9, 5);
         y += 4;
       });

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ObserveMD</title>
+<link rel="icon" type="image/png" href="assets/logo-purple.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -100,11 +101,22 @@ nav{
     font-family:'Space Grotesk';
     font-size:1.4rem;
     font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:9px;
+}
+
+.logo-icon{
+    width:30px;
+    height:30px;
+    object-fit:contain;
+    flex-shrink:0;
 }
 
 .logo span{
     background:linear-gradient(135deg,#8b5cf6,#06b6d4);
     -webkit-background-clip:text;
+    background-clip:text;
     color:transparent;
 }
 
@@ -515,7 +527,7 @@ footer{
 
 <nav>
 <div class="container nav-inner">
-<div class="logo">Observe<span>MD</span></div>
+<div class="logo"><img class="logo-icon" src="assets/logo-white.png" alt="ObserveMD icon">Observe<span>MD</span></div>
 
 <div class="nav-links">
 <a href="#">Features</a>

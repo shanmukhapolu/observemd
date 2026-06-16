@@ -233,13 +233,13 @@ const OMD = (() => {
     const html = `
       <div class="mobile-bar">
         <div class="logo" style="margin:0;font-size:1.2rem;">
-          <span class="logo-mark"><i data-lucide="stethoscope"></i></span>ObserveMD
+          <span class="logo-mark"><img src="assets/logo-white.png" alt="ObserveMD icon"></span><span class="logo-text">Observe</span><span class="logo-md">MD</span>
         </div>
         <button class="menu-btn" id="menuBtn"><i data-lucide="menu"></i></button>
       </div>
       <aside class="sidebar" id="sidebar">
         <div class="logo">
-          <span class="logo-mark"><i data-lucide="stethoscope"></i></span>ObserveMD
+          <span class="logo-mark"><img src="assets/logo-white.png" alt="ObserveMD icon"></span><span class="logo-text">Observe</span><span class="logo-md">MD</span>
         </div>
         <nav class="nav">${items}</nav>
         <div class="spacer"></div>
@@ -464,14 +464,16 @@ const OMD = (() => {
 
     /* ---- helper fns ---- */
     function footer(label) {
-      doc.setFontSize(8); doc.setTextColor(...muted);
-      // Mini ObserveMD wordmark bottom-left
+      // Mini ObserveMD wordmark bottom-left — Observe white, M purple, D cyan
       doc.setFont("helvetica","bold"); doc.setFontSize(8);
-      doc.setTextColor(...purple); doc.text("Observe", M, H - 28, {baseline:"bottom"});
+      doc.setTextColor(220, 225, 235); doc.text("Observe", M, H - 28, {baseline:"bottom"});
       const pw = doc.getTextWidth("Observe");
-      doc.setTextColor(...cyan);   doc.text("MD", M + pw, H - 28, {baseline:"bottom"});
+      doc.setTextColor(...purple); doc.text("M", M + pw, H - 28, {baseline:"bottom"});
+      const mfw = doc.getTextWidth("M");
+      doc.setTextColor(...cyan);   doc.text("D", M + pw + mfw, H - 28, {baseline:"bottom"});
+      const dw = doc.getTextWidth("D");
       doc.setTextColor(...muted);  doc.setFont("helvetica","normal");
-      doc.text("  •  " + prof.name, M + pw + doc.getTextWidth("MD"), H - 28, {baseline:"bottom"});
+      doc.text("  •  " + prof.name, M + pw + mfw + dw, H - 28, {baseline:"bottom"});
       doc.text(label, W - M, H - 28, { align: "right", baseline:"bottom" });
     }
 
@@ -510,12 +512,15 @@ const OMD = (() => {
     doc.setFillColor(...purple); doc.rect(0, 0, W, 10, "F");
     doc.setFillColor(...cyan);   doc.rect(0, 10, W, 4, "F");
 
-    // ObserveMD wordmark top-left — matching the in-app style
+    // ObserveMD wordmark top-left — Observe in white, MD in brand gradient cyan
     const logoY = 60;
     doc.setFont("helvetica","bold"); doc.setFontSize(28);
-    doc.setTextColor(255, 255, 255); doc.text("Observe", M, logoY);
+    doc.setTextColor(248, 250, 252); doc.text("Observe", M, logoY);
     const logoW = doc.getTextWidth("Observe");
-    doc.setTextColor(...cyan); doc.text("MD", M + logoW, logoY);
+    // MD: use the gradient end colour (cyan) to match the in-app gradient effect
+    doc.setTextColor(124, 58, 237); doc.text("M", M + logoW, logoY);
+    const mW = doc.getTextWidth("M");
+    doc.setTextColor(6, 182, 212); doc.text("D", M + logoW + mW, logoY);
 
     doc.setFont("helvetica","normal"); doc.setFontSize(10);
     doc.setTextColor(...muted);
@@ -555,11 +560,13 @@ const OMD = (() => {
     doc.setTextColor(...muted); doc.setFontSize(9);
     doc.text("Generated " + new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}), M, H - 60);
 
-    // ObserveMD wordmark bottom-left of cover
+    // ObserveMD wordmark bottom-left of cover — Observe white, M purple, D cyan
     doc.setFont("helvetica","bold"); doc.setFontSize(9);
-    doc.setTextColor(...purple); doc.text("Observe", M, H - 40);
+    doc.setTextColor(220, 225, 235); doc.text("Observe", M, H - 40);
     const bw2 = doc.getTextWidth("Observe");
-    doc.setTextColor(...cyan); doc.text("MD", M + bw2, H - 40);
+    doc.setTextColor(...purple); doc.text("M", M + bw2, H - 40);
+    const bw3 = doc.getTextWidth("M");
+    doc.setTextColor(...cyan); doc.text("D", M + bw2 + bw3, H - 40);
 
     /* ---- Professional Summary ---- */
     newPage("Professional Summary");

@@ -233,13 +233,13 @@ const OMD = (() => {
     const html = `
       <div class="mobile-bar">
         <div class="logo" style="margin:0;font-size:1.2rem;">
-          <span class="logo-mark"><img src="assets/logo-white.png" alt="ObserveMD icon"></span><span class="logo-text">Observe</span><span class="logo-md">MD</span>
+          <span class="logo-mark"><img src="assets/logo-white.png" alt="ObserveMD icon"></span><span class="logo-wordmark">Observe<span class="logo-md">MD</span></span>
         </div>
         <button class="menu-btn" id="menuBtn"><i data-lucide="menu"></i></button>
       </div>
       <aside class="sidebar" id="sidebar">
         <div class="logo">
-          <span class="logo-mark"><img src="assets/logo-white.png" alt="ObserveMD icon"></span><span class="logo-text">Observe</span><span class="logo-md">MD</span>
+          <span class="logo-mark"><img src="assets/logo-white.png" alt="ObserveMD icon"></span><span class="logo-wordmark">Observe<span class="logo-md">MD</span></span>
         </div>
         <nav class="nav">${items}</nav>
         <div class="spacer"></div>
@@ -442,6 +442,41 @@ const OMD = (() => {
     });
   }
 
+  // Render gradient text on a hidden canvas and return a data URL
+  function _gradientTextImg(text, fontSize, colors) {
+    const c = document.createElement("canvas");
+    const scale = 3; // retina
+    c.height = Math.ceil(fontSize * scale * 1.4);
+    const ctx = c.getContext("2d");
+    ctx.font = `bold ${fontSize * scale}px "Space Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif`;
+    const tw = ctx.measureText(text).width;
+    c.width = Math.ceil(tw) + 4;
+    ctx.font = `bold ${fontSize * scale}px "Space Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif`;
+    const grad = ctx.createLinearGradient(0, 0, c.width, 0);
+    grad.addColorStop(0, colors[0]);
+    grad.addColorStop(1, colors[1]);
+    ctx.fillStyle = grad;
+    ctx.textBaseline = "top";
+    ctx.fillText(text, 2, 0);
+    return { dataUrl: c.toDataURL("image/png"), pxW: c.width / scale, pxH: c.height / scale };
+  }
+
+  // Load a URL as a base64 data URL (for the logo PNG)
+  function _fetchImgDataUrl(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext("2d").drawImage(img, 0, 0);
+        resolve(c.toDataURL("image/png"));
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
   async function exportPortfolio() {
     toast("Generating portfolio PDF…");
     try {
@@ -459,35 +494,78 @@ const OMD = (() => {
     const M = 56;
     let y = 0;
 
-    const purple = [124, 58, 237], cyan = [6, 182, 212], dark = [30, 35, 45], grey = [110, 120, 135];
+    // Brand colours (dark theme)
+    const purple = [139, 92, 246], cyan = [6, 182, 212];
     const bg = [10, 11, 15], card = [18, 21, 32], muted = [100, 116, 139];
+    const white = [248, 250, 252], bodyText = [190, 198, 215], subText = [160, 170, 190];
+
+    // Pre-render gradient "MD" images at sizes we need
+    const GRAD = ["#8b5cf6", "#06b6d4"];
+    const mdLarge  = _gradientTextImg("MD", 28, GRAD); // cover top-left
+    const mdSmall  = _gradientTextImg("MD",  8, GRAD); // footer
+    const mdMedium = _gradientTextImg("MD",  9, GRAD); // cover bottom
+
+    // Load logo PNG as data URL
+    let logoDataUrl = null;
+    try { logoDataUrl = await _fetchImgDataUrl("assets/logo-white.png"); } catch { /* skip if unavailable */ }
+
+    // Draw the full "ObserveMD" wordmark: logo icon + "Observe" in white + "MD" gradient image
+    function drawWordmark(xPos, yPos, fontSize, imgCache) {
+      const iconSize = fontSize * 1.2;
+      if (logoDataUrl) {
+        doc.addImage(logoDataUrl, "PNG", xPos, yPos - iconSize * 0.82, iconSize, iconSize);
+        xPos += iconSize + 4;
+      }
+      doc.setFont("helvetica","bold"); doc.setFontSize(fontSize);
+      doc.setTextColor(...white);
+      doc.text("Observe", xPos, yPos);
+      const obsW = doc.getTextWidth("Observe");
+      const img = imgCache;
+      // addImage: x, y are top-left; text baseline is approx 80% down the cap height
+      const imgH = img.pxH;
+      const imgW = img.pxW;
+      const scale = (fontSize * 1.15) / imgH;
+      doc.addImage(img.dataUrl, "PNG", xPos + obsW, yPos - imgH * scale * 0.85, imgW * scale, imgH * scale);
+    }
 
     /* ---- helper fns ---- */
     function footer(label) {
-      // Mini ObserveMD wordmark bottom-left — Observe white, M purple, D cyan
       doc.setFont("helvetica","bold"); doc.setFontSize(8);
-      doc.setTextColor(220, 225, 235); doc.text("Observe", M, H - 28, {baseline:"bottom"});
+      doc.setTextColor(...white);
+      const footY = H - 20;
+      doc.text("Observe", M, footY, { baseline:"bottom" });
       const pw = doc.getTextWidth("Observe");
-      doc.setTextColor(...purple); doc.text("M", M + pw, H - 28, {baseline:"bottom"});
-      const mfw = doc.getTextWidth("M");
-      doc.setTextColor(...cyan);   doc.text("D", M + pw + mfw, H - 28, {baseline:"bottom"});
-      const dw = doc.getTextWidth("D");
-      doc.setTextColor(...muted);  doc.setFont("helvetica","normal");
-      doc.text("  •  " + prof.name, M + pw + mfw + dw, H - 28, {baseline:"bottom"});
-      doc.text(label, W - M, H - 28, { align: "right", baseline:"bottom" });
+      const imgH = mdSmall.pxH, imgW = mdSmall.pxW;
+      const scale = (8 * 1.15) / imgH;
+      doc.addImage(mdSmall.dataUrl, "PNG", M + pw, footY - imgH * scale, imgW * scale, imgH * scale);
+      const mdTotalW = imgW * scale;
+      doc.setTextColor(...muted); doc.setFont("helvetica","normal");
+      doc.text("  •  " + (prof.name || ""), M + pw + mdTotalW, footY, { baseline:"bottom" });
+      doc.text(label, W - M, footY, { align: "right", baseline:"bottom" });
+      // Hairline separator
+      doc.setDrawColor(35, 40, 58); doc.setLineWidth(0.5);
+      doc.line(M, H - 28, W - M, H - 28);
     }
 
     function newPage(title) {
       doc.addPage(); y = M;
-      // Thin top accent bar
-      doc.setFillColor(...purple); doc.rect(0, 0, W, 4, "F");
-      doc.setFillColor(...cyan);   doc.rect(0, 4, W, 2, "F");
+      // Gradient accent bar — simulate with steps
+      const steps = 24;
+      for (let i = 0; i < steps; i++) {
+        const t = i / (steps - 1);
+        const r = Math.round(139 + (6  - 139) * t);
+        const g = Math.round(92  + (182 - 92)  * t);
+        const b = Math.round(246 + (212 - 246) * t);
+        doc.setFillColor(r, g, b);
+        doc.rect((W / steps) * i, 0, W / steps + 1, 5, "F");
+      }
+      // Dark page background hint
+      doc.setFillColor(...bg); doc.rect(0, 5, W, H - 5, "F");
       // Section title
-      doc.setTextColor(...purple); doc.setFont("helvetica","bold"); doc.setFontSize(18);
-      doc.text(title, M, y + 6); y += 16;
+      doc.setFont("helvetica","bold"); doc.setFontSize(18);
+      doc.setTextColor(...purple); doc.text(title, M, y + 6); y += 16;
       doc.setDrawColor(...purple); doc.setLineWidth(1.5);
       doc.line(M, y, M + 48, y); y += 28;
-      doc.setTextColor(220, 225, 235);
     }
 
     function ensure(space, title) { if (y + space > H - 60) { footer(title); newPage(title + " (cont.)"); } }
@@ -495,78 +573,74 @@ const OMD = (() => {
     function heading(t) {
       ensure(42, t); doc.setFont("helvetica","bold"); doc.setFontSize(11);
       doc.setTextColor(...cyan); doc.text(t, M, y); y += 18;
-      doc.setTextColor(200, 205, 215);
     }
 
     function para(t, size = 10, gap = 5) {
       doc.setFont("helvetica","normal"); doc.setFontSize(size);
-      doc.setTextColor(190, 198, 215);
+      doc.setTextColor(...bodyText);
       const lines = doc.splitTextToSize(t, W - M * 2);
       lines.forEach(ln => { ensure(size + gap, "Portfolio"); doc.text(ln, M, y); y += size + gap; });
     }
 
     /* ---- Cover page ---- */
+    // Dark background
     doc.setFillColor(...bg); doc.rect(0, 0, W, H, "F");
 
-    // Top gradient bar
-    doc.setFillColor(...purple); doc.rect(0, 0, W, 10, "F");
-    doc.setFillColor(...cyan);   doc.rect(0, 10, W, 4, "F");
+    // Gradient top bar (simulated with colour steps)
+    const steps = 32;
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const r = Math.round(139 + (6  - 139) * t);
+      const g = Math.round(92  + (182 - 92)  * t);
+      const b = Math.round(246 + (212 - 246) * t);
+      doc.setFillColor(r, g, b);
+      doc.rect((W / steps) * i, 0, W / steps + 1, 12, "F");
+    }
 
-    // ObserveMD wordmark top-left — Observe in white, MD in brand gradient cyan
+    // ObserveMD wordmark — logo icon + "Observe" white + "MD" gradient
     const logoY = 60;
-    doc.setFont("helvetica","bold"); doc.setFontSize(28);
-    doc.setTextColor(248, 250, 252); doc.text("Observe", M, logoY);
-    const logoW = doc.getTextWidth("Observe");
-    // MD: use the gradient end colour (cyan) to match the in-app gradient effect
-    doc.setTextColor(124, 58, 237); doc.text("M", M + logoW, logoY);
-    const mW = doc.getTextWidth("M");
-    doc.setTextColor(6, 182, 212); doc.text("D", M + logoW + mW, logoY);
+    drawWordmark(M, logoY, 28, mdLarge);
 
     doc.setFont("helvetica","normal"); doc.setFontSize(10);
     doc.setTextColor(...muted);
     doc.text("HEALTHCARE OBSERVATION PORTFOLIO", M, logoY + 18);
 
     // Divider line under wordmark
-    doc.setDrawColor(40, 46, 66); doc.setLineWidth(1);
+    doc.setDrawColor(40, 46, 66); doc.setLineWidth(0.75);
     doc.line(M, logoY + 30, W - M, logoY + 30);
 
     // Student name + meta
-    const nameY = 160;
+    const nameY = 170;
     doc.setFont("helvetica","bold"); doc.setFontSize(30);
-    doc.setTextColor(240, 244, 255); doc.text(prof.name || "Student", M, nameY);
+    doc.setTextColor(...white); doc.text(prof.name || "Student", M, nameY);
     doc.setFont("helvetica","normal"); doc.setFontSize(11); doc.setTextColor(...muted);
     const metaLine = [prof.school, prof.goal, prof.gradYear ? "Class of " + prof.gradYear : ""].filter(Boolean).join("  •  ");
-    doc.text(metaLine, M, nameY + 22);
+    if (metaLine) doc.text(metaLine, M, nameY + 22);
 
     // Stat cards on cover
     const cover = [
-      ["Total Hours", a.totalHours + " hrs"],
-      ["Observations", String(a.sessions)],
-      ["Specialties", String(a.specialtiesCount)],
-      ["Reflections", String(a.respCount)],
+      ["Total Hours",   a.totalHours + " hrs"],
+      ["Observations",  String(a.sessions)],
+      ["Specialties",   String(a.specialtiesCount)],
+      ["Reflections",   String(a.respCount)],
     ];
-    let cx = M, cy = 240;
+    let cx = M, cy = 250;
     cover.forEach(c => {
-      doc.setFillColor(21, 24, 38); doc.setDrawColor(35, 40, 58);
-      doc.roundedRect(cx, cy, 108, 74, 7, 7, "FD");
+      doc.setFillColor(21, 24, 38); doc.setDrawColor(40, 46, 66);
+      doc.roundedRect(cx, cy, 110, 76, 8, 8, "FD");
       doc.setTextColor(...cyan); doc.setFont("helvetica","bold"); doc.setFontSize(20);
-      doc.text(c[1], cx + 12, cy + 36);
+      doc.text(c[1], cx + 13, cy + 36);
       doc.setTextColor(...muted); doc.setFont("helvetica","normal"); doc.setFontSize(8);
-      doc.text(c[0], cx + 12, cy + 54);
-      cx += 118;
+      doc.text(c[0].toUpperCase(), cx + 13, cy + 56);
+      cx += 120;
     });
 
     // Generated date
-    doc.setTextColor(...muted); doc.setFontSize(9);
-    doc.text("Generated " + new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}), M, H - 60);
+    doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...muted);
+    doc.text("Generated " + new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}), M, H - 44);
 
-    // ObserveMD wordmark bottom-left of cover — Observe white, M purple, D cyan
-    doc.setFont("helvetica","bold"); doc.setFontSize(9);
-    doc.setTextColor(220, 225, 235); doc.text("Observe", M, H - 40);
-    const bw2 = doc.getTextWidth("Observe");
-    doc.setTextColor(...purple); doc.text("M", M + bw2, H - 40);
-    const bw3 = doc.getTextWidth("M");
-    doc.setTextColor(...cyan); doc.text("D", M + bw2 + bw3, H - 40);
+    // Footer wordmark on cover
+    drawWordmark(M, H - 28, 9, mdMedium);
 
     /* ---- Professional Summary ---- */
     newPage("Professional Summary");

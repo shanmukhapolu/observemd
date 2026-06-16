@@ -75,7 +75,9 @@
 
 <script src="assets/app.js"></script>
 <script>
+(async () => {
 OMD.renderSidebar("analytics");
+await OMD.init();
 const a = OMD.analytics();
 const r = OMD.round;
 
@@ -187,6 +189,7 @@ document.getElementById("timeline").innerHTML = milestones.length ? milestones.m
 
 document.getElementById("exportBtn").addEventListener("click",()=>OMD.exportPortfolio());
 lucide.createIcons();
+})();
 </script>
 </body>
 </html>

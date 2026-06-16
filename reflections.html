@@ -38,7 +38,9 @@
 
 <script src="assets/app.js"></script>
 <script>
+(async () => {
 OMD.renderSidebar("reflections");
+await OMD.init();
 const Q = OMD.REFLECTION_QUESTIONS;
 const all = OMD.getAll();
 
@@ -104,6 +106,7 @@ document.getElementById("clearBtn").addEventListener("click",()=>{
 });
 document.getElementById("newObsBtn").addEventListener("click",()=>OMD.openObservationModal(()=>location.reload()));
 render();
+})();
 </script>
 </body>
 </html>

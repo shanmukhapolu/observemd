@@ -64,7 +64,9 @@
 
 <script src="assets/app.js"></script>
 <script>
+(async () => {
 OMD.renderSidebar("dashboard");
+await OMD.init();
 
 const a = OMD.analytics();
 
@@ -174,6 +176,7 @@ document.getElementById("specBars").innerHTML = specSorted.map(([s,h])=>`
 
 document.getElementById("newObsBtn").addEventListener("click",()=>OMD.openObservationModal(()=>location.reload()));
 lucide.createIcons();
+})();
 </script>
 </body>
 </html>

@@ -49,7 +49,9 @@
 
 <script src="assets/app.js"></script>
 <script>
+(async () => {
 OMD.renderSidebar("observations");
+await OMD.init();
 const Q = OMD.REFLECTION_QUESTIONS;
 let all = OMD.getAll();
 
@@ -146,6 +148,7 @@ function info(label,val){ return `<div class="field"><label>${label}</label><div
 ["q","fSpec","fProv","fSort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
 document.getElementById("newObsBtn").addEventListener("click",()=>OMD.openObservationModal(()=>{ all=OMD.getAll(); render(); }));
 render();
+})();
 </script>
 </body>
 </html>

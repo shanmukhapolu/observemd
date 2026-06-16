@@ -3,363 +3,164 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>ObserveMD • Login</title>
-
+<title>ObserveMD &bull; Sign In</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
 <style>
-
 :root{
-    --bg:#050816;
-    --muted:#94a3b8;
-
-    --purple:#8b5cf6;
-    --cyan:#06b6d4;
+  --bg:#050816;
+  --muted:#94a3b8;
+  --purple:#8b5cf6;
+  --cyan:#06b6d4;
 }
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
+*{ margin:0; padding:0; box-sizing:border-box; }
 body{
-    height:100vh;
-    display:flex;
-
-    font-family:'Inter',sans-serif;
-    color:white;
-    background:var(--bg);
-    overflow:hidden;
+  height:100vh; display:flex;
+  font-family:'Inter',sans-serif; color:white;
+  background:var(--bg); overflow:hidden;
 }
-
-/* background glow */
 body::before{
-    content:'';
-    position:fixed;
-    inset:0;
-
-    background:
+  content:''; position:fixed; inset:0; z-index:-1;
+  background:
     radial-gradient(circle at 20% 30%, rgba(139,92,246,.18), transparent 40%),
     radial-gradient(circle at 80% 20%, rgba(6,182,212,.12), transparent 40%),
     radial-gradient(circle at 50% 90%, rgba(139,92,246,.10), transparent 50%);
-
-    z-index:-1;
 }
-
-/* LOGO TOP LEFT */
 .logo{
-    position:absolute;
-    top:2rem;
-    left:3rem;
-
-    font-family:'Space Grotesk';
-    font-size:1.4rem;
-    font-weight:700;
+  position:absolute; top:2rem; left:3rem;
+  font-family:'Space Grotesk'; font-size:1.4rem; font-weight:700;
 }
-
-.logo span{
-    background:linear-gradient(135deg,var(--purple),var(--cyan));
-    -webkit-background-clip:text;
-    color:transparent;
-}
-
-/* LEFT SIDE */
+.logo span{ background:linear-gradient(135deg,var(--purple),var(--cyan)); -webkit-background-clip:text; color:transparent; }
 .left{
-    flex:1;
-
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-
-    padding:6rem;
+  flex:1; display:flex; flex-direction:column; justify-content:center; padding:6rem;
 }
-
-.left h1{
-    font-family:'Space Grotesk';
-    font-size:4.3rem;
-    line-height:1;
-
-    max-width:600px;
-
-    margin-bottom:1.5rem;
-}
-
-.left p{
-    color:var(--muted);
-    font-size:1.1rem;
-    line-height:1.8;
-
-    max-width:520px;
-}
-
-/* RIGHT SIDE */
+.left h1{ font-family:'Space Grotesk'; font-size:4rem; line-height:1.05; max-width:520px; margin-bottom:1.5rem; }
+.left p{ color:var(--muted); font-size:1.1rem; line-height:1.8; max-width:480px; }
 .right{
-    flex:1;
-
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-
-    padding:6rem;
-
-    border-left:1px solid rgba(255,255,255,.08);
-
-    background:rgba(255,255,255,.02);
+  flex:1; display:flex; flex-direction:column; justify-content:center;
+  padding:6rem; border-left:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.02);
 }
-
-.right h2{
-    font-family:'Space Grotesk';
-    font-size:2.2rem;
-    margin-bottom:.5rem;
-}
-
-.right p{
-    color:var(--muted);
-    margin-bottom:2rem;
-}
-
-.right p a{
-    color:#c4b5fd;
-    text-decoration:none;
-}
-
-/* INPUTS */
+.right h2{ font-family:'Space Grotesk'; font-size:2.2rem; margin-bottom:.5rem; }
+.right > p{ color:var(--muted); margin-bottom:2rem; }
+.right > p a{ color:#c4b5fd; text-decoration:none; }
 input{
-    width:100%;
-    height:54px;
-
-    margin-bottom:.9rem;
-
-    padding:0 1.2rem;
-
-    border-radius:999px;
-
-    border:1px solid rgba(255,255,255,.10);
-
-    background:rgba(255,255,255,.03);
-
-    color:white;
-
-    outline:none;
-
-    transition:.2s;
+  width:100%; height:54px; margin-bottom:.9rem; padding:0 1.2rem;
+  border-radius:999px; border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.03); color:white; outline:none; transition:.2s;
 }
-
-input::placeholder{
-    color:#7c879a;
-}
-
-input:focus{
-    border-color:var(--purple);
-    box-shadow:0 0 0 4px rgba(139,92,246,.12);
-    background:rgba(255,255,255,.05);
-}
-
-/* BUTTON */
+input::placeholder{ color:#7c879a; }
+input:focus{ border-color:var(--purple); box-shadow:0 0 0 4px rgba(139,92,246,.12); background:rgba(255,255,255,.05); }
 .btn{
-    width:100%;
-    height:54px;
-
-    margin-top:.5rem;
-
-    border:none;
-    border-radius:999px;
-
-    background:linear-gradient(135deg,var(--purple),var(--cyan));
-
-    color:white;
-
-    font-weight:700;
-
-    cursor:pointer;
-
-    transition:.2s;
+  width:100%; height:54px; margin-top:.5rem; border:none; border-radius:999px;
+  background:linear-gradient(135deg,var(--purple),var(--cyan));
+  color:white; font-weight:700; cursor:pointer; transition:.2s;
 }
-
-.btn:hover{
-    transform:translateY(-2px);
-    box-shadow:0 12px 30px rgba(139,92,246,.25);
+.btn:hover{ transform:translateY(-2px); box-shadow:0 12px 30px rgba(139,92,246,.25); }
+.btn:disabled{ opacity:.6; cursor:not-allowed; transform:none; }
+.forgot{
+  display:block; text-align:right; margin-top:-.4rem; margin-bottom:.9rem;
+  font-size:.83rem; color:#c4b5fd; cursor:pointer;
+  background:none; border:none; text-decoration:underline; text-underline-offset:3px;
 }
-
-/* GOOGLE */
-.google{
-    width:100%;
-    height:54px;
-
-    border-radius:999px;
-
-    border:1px solid rgba(255,255,255,.10);
-
-    background:rgba(255,255,255,.03);
-
-    color:white;
-
-    cursor:pointer;
-
-    margin-bottom:1rem;
-}
-
-.google:hover{
-    background:rgba(255,255,255,.05);
-}
-
-/* DIVIDER */
 .divider{
-    display:flex;
-    align-items:center;
-
-    margin:1.5rem 0;
-
-    color:#64748b;
-    font-size:.85rem;
+  display:flex; align-items:center; margin:1.5rem 0; color:#64748b; font-size:.85rem;
 }
-
-.divider::before,
-.divider::after{
-    content:'';
-    flex:1;
-    height:1px;
-    background:rgba(255,255,255,.08);
+.divider::before,.divider::after{ content:''; flex:1; height:1px; background:rgba(255,255,255,.08); }
+.divider span{ padding:0 1rem; }
+/* loading gate */
+#loginGate{
+  position:fixed; inset:0; z-index:99; background:var(--bg);
+  display:grid; place-items:center; transition:opacity .25s;
 }
-
-.divider span{
-    padding:0 1rem;
-}
-
-/* RESPONSIVE */
+@keyframes spin{ to{ transform:rotate(360deg); } }
 @media(max-width:900px){
-
-body{
-    flex-direction:column;
+  body{ flex-direction:column; overflow:auto; }
+  .left{ display:none; }
+  .right{ border-left:none; padding:3rem; height:100vh; }
+  .logo{ left:2rem; top:1.5rem; }
 }
-
-.left{
-    display:none;
-}
-
-.right{
-    border-left:none;
-    padding:3rem;
-}
-
-.logo{
-    left:2rem;
-    top:1.5rem;
-}
-
-}
-
 </style>
 </head>
-
 <body>
 
-<div class="logo">
-    Observe<span>MD</span>
+<!-- Auth check gate: hides flicker while we confirm logged-out state -->
+<div id="loginGate">
+  <div style="width:40px;height:40px;border-radius:50%;border:3px solid rgba(139,92,246,.25);border-top-color:#8b5cf6;animation:spin .8s linear infinite;"></div>
 </div>
 
-<!-- LEFT -->
+<div class="logo">Observe<span>MD</span></div>
+
 <div class="left">
-
-    <h1>
-        Welcome back.<br>
-        Pick up where you left off.
-    </h1>
-
-    <p>
-        Continue tracking your clinical experiences, shadowing hours, and reflections in one place.
-    </p>
-
+  <h1>Welcome back.</h1>
+  <p>Continue tracking your clinical experiences, shadowing hours, and reflections — right where you left off.</p>
 </div>
 
-<!-- RIGHT -->
 <div class="right">
+  <h2>Sign in</h2>
+  <p>Don&#39;t have an account? <a href="signup.html">Create one</a></p>
 
-    <h2>Sign in</h2>
+  <div class="divider"><span>email &amp; password</span></div>
 
-    <p>
-        Don’t have an account?
-        <a href="signup.html">Create one</a>
-    </p>
-
-    <button class="google">Continue with Google</button>
-
-    <div class="divider"><span>or</span></div>
-
-    <form>
-
-        <input type="email" placeholder="Email address" required>
-        <input type="password" placeholder="Password" required>
-
-        <button class="btn" type="submit">
-            Sign in
-        </button>
-
-    </form>
-
+  <form id="loginForm">
+    <input type="email"    id="emailIn" placeholder="Email address" required>
+    <input type="password" id="passIn"  placeholder="Password"      required>
+    <button type="button" class="forgot" id="forgotBtn">Forgot password?</button>
+    <button class="btn" type="submit" id="submitBtn">Sign in</button>
+  </form>
 </div>
+
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { auth }                from "./assets/firebase.js";
 import {
-  getAuth,
   signInWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup
+  sendPasswordResetEmail,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDzGHoIe7hMutBTDLXcCwJ-3ADprK3M1NU",
-  authDomain: "observemd.firebaseapp.com",
-  projectId: "observemd",
-  storageBucket: "observemd.firebasestorage.app",
-  messagingSenderId: "125474110417",
-  appId: "1:125474110417:web:7b4366e2ec0eadcc313ef0",
-  measurementId: "G-V5DQGKC0XR"
-};
+const gate = document.getElementById("loginGate");
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+// If already authenticated, skip login page entirely
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    window.location.replace("dashboard.html");
+  } else {
+    gate.style.opacity = "0";
+    setTimeout(() => gate.remove(), 280);
+  }
+});
 
-const form = document.querySelector("form");
-const googleBtn = document.querySelector(".google");
+const form      = document.getElementById("loginForm");
+const submitBtn = document.getElementById("submitBtn");
 
-/* ---------------- EMAIL LOGIN ---------------- */
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const email = document.getElementById("emailIn").value.trim();
+  const pass  = document.getElementById("passIn").value;
 
-  const inputs = form.querySelectorAll("input");
-
-  const email = inputs[0].value;
-  const password = inputs[1].value;
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Signing in…";
 
   try {
-    await signInWithEmailAndPassword(auth, email, password);
-    window.location.href = "dashboard.html";
+    await signInWithEmailAndPassword(auth, email, pass);
+    // onAuthStateChanged above will redirect once user resolves
+  } catch (err) {
+    alert(err.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Sign in";
+  }
+});
+
+document.getElementById("forgotBtn").addEventListener("click", async () => {
+  const email = document.getElementById("emailIn").value.trim();
+  if (!email) { alert("Enter your email address first, then click Forgot password."); return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert("Password reset email sent! Check your inbox.");
   } catch (err) {
     alert(err.message);
   }
 });
-
-/* ---------------- GOOGLE LOGIN ---------------- */
-if (googleBtn) {
-  googleBtn.addEventListener("click", async () => {
-    try {
-      const result = await signInWithPopup(auth, provider);
-
-      if (result.user) {
-        window.location.href = "dashboard.html";
-      }
-    } catch (err) {
-      alert(err.message);
-    }
-  });
-}
 </script>
 </body>
 </html>

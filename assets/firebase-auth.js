@@ -1,48 +1,44 @@
 /* ============================================================
-   ObserveMD — Shared Firebase Auth Guard
-   Protects app pages, shows the signed-in user, handles sign out.
-   Include on every protected page:
-     <script type="module" src="assets/firebase-auth.js"></script>
+   ObserveMD — Shared Firebase Auth Guard + Firestore bridge
+   - Uses browserLocalPersistence so the user stays signed in
+     unless they explicitly sign out or clear site data.
+   - Exposes window.OMD_USER (the Firebase user) and
+     window.OMD_DB   (the Firestore instance)
+     so app.js can use them for per-user data operations.
    ============================================================ */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { auth, db }               from "./firebase.js";
+import { onAuthStateChanged, signOut }
+                                   from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDzGHoIe7hMutBTDLXcCwJ-3ADprK3M1NU",
-  authDomain: "observemd.firebaseapp.com",
-  projectId: "observemd",
-  storageBucket: "observemd.firebasestorage.app",
-  messagingSenderId: "125474110417",
-  appId: "1:125474110417:web:7b4366e2ec0eadcc313ef0",
-  measurementId: "G-V5DQGKC0XR"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-/* ---- Prevent flash of protected content until auth resolves ---- */
+/* ---- Auth-gate overlay ---- */
 const gate = document.createElement("div");
 gate.id = "authGate";
-gate.innerHTML = `<div class="auth-gate-spinner"></div>`;
+gate.style.cssText = [
+  "position:fixed;inset:0;z-index:9999;display:grid;place-items:center;",
+  "background:var(--bg,#0a0b0f);transition:opacity .25s;",
+].join("");
+gate.innerHTML = `
+  <div style="text-align:center">
+    <div style="
+      width:44px;height:44px;border-radius:50%;margin:0 auto 16px;
+      border:3px solid rgba(124,58,237,.25);border-top-color:#7c3aed;
+      animation:spin .8s linear infinite;"></div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+  </div>`;
 document.documentElement.appendChild(gate);
 
 function removeGate() {
   gate.style.opacity = "0";
-  setTimeout(() => gate.remove(), 250);
+  setTimeout(() => gate.remove(), 280);
 }
 
-/* ---- Render the signed-in user into the sidebar ---- */
+/* ---- Populate sidebar user info ---- */
 function fillUser(user) {
-  const nameEl = document.getElementById("sbUserName");
-  const mailEl = document.getElementById("sbUserEmail");
-  const avEl   = document.getElementById("sbUserAvatar");
-
   const display = user.displayName || (user.email ? user.email.split("@")[0] : "Student");
+  const nameEl  = document.getElementById("sbUserName");
+  const mailEl  = document.getElementById("sbUserEmail");
+  const avEl    = document.getElementById("sbUserAvatar");
   if (nameEl) nameEl.textContent = display;
   if (mailEl) mailEl.textContent = user.email || "";
   if (avEl)   avEl.textContent = (display.trim()[0] || "S").toUpperCase();
@@ -62,9 +58,9 @@ function wireSignOut() {
   });
 }
 
-/* The sidebar is injected by app.js. If it isn't ready yet, retry shortly. */
+/* Sidebar is injected by app.js asynchronously — retry until elements exist */
 function applyUserToSidebar(user, attempt = 0) {
-  if (document.getElementById("sbUserName") || attempt > 40) {
+  if (document.getElementById("sbUserName") || attempt > 60) {
     fillUser(user);
     wireSignOut();
   } else {
@@ -72,12 +68,15 @@ function applyUserToSidebar(user, attempt = 0) {
   }
 }
 
+/* ---- Auth state listener ---- */
 onAuthStateChanged(auth, (user) => {
   if (user) {
+    // Make user + DB available to app.js synchronously
+    window.OMD_USER = user;
+    window.OMD_DB   = db;
     applyUserToSidebar(user);
     removeGate();
   } else {
-    // Not signed in — send to login.
     window.location.replace("login.html");
   }
 });

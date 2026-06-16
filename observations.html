@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Observations • ObserveMD</title>
+<link rel="icon" type="image/png" href="assets/logo-purple.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -49,7 +50,9 @@
 
 <script src="assets/app.js"></script>
 <script>
+(async () => {
 OMD.renderSidebar("observations");
+await OMD.init();
 const Q = OMD.REFLECTION_QUESTIONS;
 let all = OMD.getAll();
 
@@ -146,6 +149,7 @@ function info(label,val){ return `<div class="field"><label>${label}</label><div
 ["q","fSpec","fProv","fSort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
 document.getElementById("newObsBtn").addEventListener("click",()=>OMD.openObservationModal(()=>{ all=OMD.getAll(); render(); }));
 render();
+})();
 </script>
 </body>
 </html>

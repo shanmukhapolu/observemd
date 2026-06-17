@@ -64,6 +64,17 @@ document.getElementById("fProv").innerHTML += provs.map(p=>`<option>${p}</option
 
 function summary(o){ return o.notes && o.notes.length>120 ? o.notes.slice(0,120)+"…" : (o.notes||""); }
 
+const VSTATUS = {
+  verified: { cls:"green", icon:"shield-check",   label:"Verified" },
+  pending:  { cls:"cyan",  icon:"clock",          label:"Pending"  },
+  rejected: { cls:"",      icon:"shield-x",        label:"Not confirmed" },
+};
+function vBadge(o){
+  const s = VSTATUS[o.verificationStatus];
+  if(!s) return "";
+  return `<span class="badge ${s.cls}" style="display:inline-flex;align-items:center;gap:5px;"><i data-lucide="${s.icon}" style="width:13px;height:13px"></i>${s.label}</span>`;
+}
+
 function render(){
   const q = document.getElementById("q").value.toLowerCase();
   const fs = document.getElementById("fSpec").value;
@@ -101,6 +112,7 @@ function render(){
           <span class="obs-hours"><i data-lucide="clock"></i>${o.hours} hrs</span>
           <span class="row-sub" style="display:flex;align-items:center;gap:5px;"><i data-lucide="map-pin" style="width:14px;height:14px"></i>${o.location}</span>
         </div>
+        ${o.verificationStatus ? `<div style="margin-top:-4px">${vBadge(o)}</div>` : ""}
       </div>`).join("");
   }
   lucide.createIcons();

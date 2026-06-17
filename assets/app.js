@@ -101,6 +101,66 @@ const OMD = (() => {
     _list = _list.filter(o => o.id !== id);
   }
 
+  /* ---- Physician verification ---- */
+  // Creates a verificationRequests doc with a secure single-use token,
+  // flips the observation to "pending", then calls the serverless email API.
+  async function requestVerification(obs, physicianEmail) {
+    const { collection, addDoc, doc, updateDoc, serverTimestamp, Timestamp } = await _fs();
+
+    // Cryptographically secure, unguessable token (stored in a field, NOT the doc id)
+    const token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "");
+
+    const now     = Date.now();
+    const expires = now + 30 * 24 * 60 * 60 * 1000; // 30 days
+
+    const prof   = await getProfile().catch(() => ({}));
+    const studentName = prof.name || (window.OMD_USER?.email || "A student");
+
+    await addDoc(collection(_db, "verificationRequests"), {
+      observationId: obs.id,
+      studentId:     _uid,
+      studentName,
+      physicianEmail,
+      token,
+      status:        "pending",
+      createdAt:     serverTimestamp(),
+      expiresAt:     Timestamp.fromMillis(expires),
+      // Snapshot of observation details so the (unauthenticated) physician
+      // page can display them without read access to /observations.
+      date:          obs.date,
+      specialty:     obs.specialty,
+      hours:         obs.hours,
+      attributes:    {},
+      comment:       "",
+    });
+
+    // Reflect pending state on the observation
+    await updateDoc(doc(_db, "observations", obs.id), { verificationStatus: "pending" });
+    obs.verificationStatus = "pending";
+    const cached = _list.find(o => o.id === obs.id);
+    if (cached) cached.verificationStatus = "pending";
+
+    // Send the email via the Vercel serverless function
+    const res = await fetch("/api/send-verification-email", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        token,
+        physicianEmail,
+        studentName,
+        observationId: obs.id,
+        date:          obs.date,
+        specialty:     obs.specialty,
+        hours:         obs.hours,
+      }),
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => "Email send failed");
+      throw new Error(msg || "Email send failed");
+    }
+    return token;
+  }
+
   /* ---- Profile (stored in Firestore /users/<uid>) ---- */
   async function getProfile() {
     const { doc, getDoc } = await _fs();
@@ -316,6 +376,25 @@ const OMD = (() => {
             </div>
             <div class="form-divider">Reflection Questions</div>
             ${fields}
+            <div class="form-divider">Physician Verification</div>
+            <div class="verify-box">
+              <div class="verify-box-head">
+                <span class="verify-box-ic"><i data-lucide="shield-check"></i></span>
+                <div class="verify-box-copy">
+                  <div class="verify-box-title">Request physician verification</div>
+                  <div class="verify-box-sub">We'll email the physician a secure, single-use link to confirm this observation took place. No account needed on their end.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" name="requestVerify">
+                  <span class="switch-track"><span class="switch-thumb"></span></span>
+                </label>
+              </div>
+              <div class="field full verify-email-field" style="display:none;margin-top:14px;">
+                <label>Physician Email <span style="color:var(--rose)">*</span></label>
+                <input type="email" name="physicianEmail" placeholder="dr.smith@hospital.org">
+                <span class="hint">The verification link expires in 30 days.</span>
+              </div>
+            </div>
             <div class="modal-actions">
               <button type="button" class="btn btn-ghost" data-close>Cancel</button>
               <button type="submit" class="btn"><i data-lucide="save"></i>Save Observation</button>
@@ -326,6 +405,16 @@ const OMD = (() => {
 
       overlay.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => overlay.classList.remove("open")));
       overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("open"); });
+
+      // Toggle the physician email field when verification is requested
+      const verifyToggle = overlay.querySelector('[name="requestVerify"]');
+      const emailField   = overlay.querySelector(".verify-email-field");
+      const emailInput   = overlay.querySelector('[name="physicianEmail"]');
+      verifyToggle.addEventListener("change", () => {
+        emailField.style.display = verifyToggle.checked ? "flex" : "none";
+        emailInput.required = verifyToggle.checked;
+        if (!verifyToggle.checked) emailInput.value = "";
+      });
 
       overlay.querySelector("#obsForm").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -347,10 +436,30 @@ const OMD = (() => {
           notes:         f.get("notes").trim(),
           reflections,
         };
-        await add(obs);
+
+        const wantsVerify   = f.get("requestVerify") === "on";
+        const physicianMail = (f.get("physicianEmail") || "").trim();
+        if (wantsVerify) obs.verificationStatus = "pending";
+
+        const saved = await add(obs);
+
+        // Fire off a physician verification request if requested
+        if (wantsVerify && physicianMail) {
+          try {
+            await requestVerification(saved, physicianMail);
+            toast("Observation saved · verification email sent");
+          } catch (err) {
+            console.log("[v0] verification request failed:", err.message);
+            toast("Saved, but the verification email could not be sent");
+          }
+        } else {
+          toast("Observation saved");
+        }
+
         overlay.classList.remove("open");
         e.target.reset();
-        toast("Observation saved");
+        emailField.style.display = "none";
+        emailInput.required = false;
         if (onSaved) onSaved();
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i data-lucide="save"></i>Save Observation';
@@ -775,6 +884,7 @@ const OMD = (() => {
     init,
     REFLECTION_QUESTIONS, SPECIALTIES, THEMES,
     getAll, add, remove, getProfile, saveProfile, seedIfEmpty,
+    requestVerification,
     hoursBetween, fmtDate, monthKey, monthLabel, wordCount, round,
     analytics, renderSidebar, toast, openObservationModal,
     lineChart, barChart, donut, colorFor, exportPortfolio,

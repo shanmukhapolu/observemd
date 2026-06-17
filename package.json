@@ -1,0 +1,9 @@
+{
+  "name": "observemd",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ObserveMD — healthcare observation portfolio with physician verification",
+  "dependencies": {
+    "resend": "^4.8.0"
+  }
+}

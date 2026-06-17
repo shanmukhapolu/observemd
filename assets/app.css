@@ -561,6 +561,48 @@ select.control:focus, input.control:focus{ border-color:var(--accent); }
 
 .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:var(--s-3); }
 
+/* ---------------- Verification box (modal) ---------------- */
+.verify-box{
+    background:var(--card-2);
+    border:1px solid var(--border);
+    border-radius:var(--r-md);
+    padding:18px 20px;
+}
+.verify-box-head{
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+}
+.verify-box-ic{
+    width:38px; height:38px; flex-shrink:0;
+    border-radius:11px; display:grid; place-items:center;
+    background:var(--accent-soft); color:#c4b5fd;
+}
+.verify-box-ic i,.verify-box-ic svg{ width:20px; height:20px; }
+.verify-box-copy{ flex:1; min-width:0; }
+.verify-box-title{ font-size:.98rem; font-weight:600; color:var(--text); }
+.verify-box-sub{ color:var(--muted); font-size:.85rem; line-height:1.5; margin-top:4px; }
+
+/* toggle switch */
+.switch{ flex-shrink:0; cursor:pointer; }
+.switch input{ position:absolute; opacity:0; width:0; height:0; }
+.switch-track{
+    display:block; width:46px; height:26px; border-radius:999px;
+    background:var(--border); border:1px solid var(--border);
+    position:relative; transition:background .2s;
+}
+.switch-thumb{
+    position:absolute; top:2px; left:2px;
+    width:20px; height:20px; border-radius:50%;
+    background:#fff; transition:transform .2s;
+}
+.switch input:checked + .switch-track{
+    background:linear-gradient(135deg,#8b5cf6,#06b6d4);
+    border-color:transparent;
+}
+.switch input:checked + .switch-track .switch-thumb{ transform:translateX(20px); }
+.switch input:focus-visible + .switch-track{ box-shadow:0 0 0 3px rgba(124,58,237,.3); }
+
 /* empty state */
 .empty{
     text-align:center;

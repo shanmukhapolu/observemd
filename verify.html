@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Observation • ObserveMD</title>
+<link rel="icon" type="image/png" href="assets/logo-white.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root{
+  --bg:#050816; --card:#0f1320; --border:rgba(255,255,255,.10);
+  --text:#f8fafc; --muted:#94a3b8; --muted-2:#64748b;
+  --purple:#8b5cf6; --cyan:#06b6d4; --green:#22c55e; --rose:#f43f5e;
+}
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
+h1,h2,h3,.display{ font-family:'Space Grotesk','Inter',sans-serif; }
+body{
+  min-height:100vh; background:var(--bg); color:var(--text);
+  display:flex; flex-direction:column; align-items:center;
+  padding:32px 20px;
+}
+body::before{
+  content:''; position:fixed; inset:0; z-index:-1;
+  background:
+    radial-gradient(circle at 20% 25%, rgba(139,92,246,.16), transparent 42%),
+    radial-gradient(circle at 82% 18%, rgba(6,182,212,.12), transparent 42%);
+}
+.logo{
+  font-family:'Space Grotesk'; font-size:1.4rem; font-weight:700;
+  margin-bottom:28px; display:flex; align-items:center; gap:10px;
+}
+.logo .mark{ width:30px; height:30px; border-radius:9px; overflow:hidden; display:grid; place-items:center; }
+.logo .mark img{ width:100%; height:100%; object-fit:contain; }
+.logo .md{ background:linear-gradient(135deg,var(--purple),var(--cyan)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+.card{
+  width:100%; max-width:560px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:20px; padding:32px;
+}
+.card-top-bar{ height:5px; border-radius:6px; margin:-32px -32px 28px; background:linear-gradient(135deg,var(--purple),var(--cyan)); }
+
+.state-ic{
+  width:56px; height:56px; border-radius:16px; display:grid; place-items:center;
+  margin-bottom:18px;
+}
+.state-ic i,.state-ic svg{ width:28px; height:28px; }
+.ic-purple{ background:rgba(139,92,246,.15); color:#c4b5fd; }
+.ic-green{ background:rgba(34,197,94,.15); color:#86efac; }
+.ic-rose{ background:rgba(244,63,94,.15); color:#fda4af; }
+.ic-muted{ background:rgba(148,163,184,.12); color:#cbd5e1; }
+
+h1{ font-size:1.6rem; letter-spacing:-.02em; margin-bottom:8px; }
+.lead{ color:var(--muted); line-height:1.6; font-size:.95rem; margin-bottom:24px; }
+
+.detail-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:1px;
+  background:var(--border); border:1px solid var(--border);
+  border-radius:14px; overflow:hidden; margin-bottom:28px;
+}
+.detail{ background:var(--card); padding:14px 16px; }
+.detail .l{ font-size:.74rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted-2); }
+.detail .v{ font-size:1rem; font-weight:600; margin-top:4px; }
+.detail.full{ grid-column:1 / -1; }
+
+.q-label{ font-size:1.05rem; font-weight:600; margin-bottom:16px; }
+
+.choice-row{ display:flex; gap:12px; margin-bottom:24px; }
+.choice{
+  flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:14px; border-radius:12px; cursor:pointer; font-weight:600;
+  border:1.5px solid var(--border); background:rgba(255,255,255,.02);
+  color:var(--text); transition:.18s;
+}
+.choice i,.choice svg{ width:18px; height:18px; }
+.choice:hover{ border-color:rgba(255,255,255,.25); }
+.choice.sel-confirm{ border-color:var(--green); background:rgba(34,197,94,.12); color:#86efac; }
+.choice.sel-reject{ border-color:var(--rose); background:rgba(244,63,94,.12); color:#fda4af; }
+
+.extra{ overflow:hidden; max-height:0; transition:max-height .3s ease; }
+.extra.open{ max-height:800px; }
+
+.section-h{ font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted-2); margin:8px 0 12px; }
+.attrs{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:22px; }
+.attr{
+  display:flex; align-items:center; gap:10px; padding:12px 14px;
+  border:1px solid var(--border); border-radius:11px; cursor:pointer;
+  background:rgba(255,255,255,.02); transition:.15s; font-size:.92rem;
+}
+.attr:hover{ border-color:rgba(255,255,255,.22); }
+.attr input{ accent-color:var(--purple); width:17px; height:17px; cursor:pointer; }
+.attr.on{ border-color:rgba(139,92,246,.5); background:rgba(139,92,246,.1); }
+
+textarea{
+  width:100%; min-height:90px; resize:vertical; line-height:1.55;
+  background:rgba(255,255,255,.03); border:1px solid var(--border);
+  border-radius:12px; color:var(--text); padding:13px 15px; outline:none;
+  font-size:.93rem; margin-bottom:24px;
+}
+textarea:focus{ border-color:var(--purple); box-shadow:0 0 0 3px rgba(139,92,246,.15); }
+label.fld{ display:block; font-size:.85rem; color:var(--muted); margin-bottom:8px; }
+
+.btn{
+  width:100%; height:52px; border:none; border-radius:12px;
+  background:linear-gradient(135deg,var(--purple),var(--cyan));
+  color:#fff; font-weight:700; font-size:.98rem; cursor:pointer; transition:.2s;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(139,92,246,.28); }
+.btn:disabled{ opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
+.btn i,.btn svg{ width:18px; height:18px; }
+
+.foot-note{ text-align:center; color:var(--muted-2); font-size:.8rem; margin-top:18px; line-height:1.5; }
+
+.spinner{
+  width:40px; height:40px; border-radius:50%; margin:40px auto;
+  border:3px solid rgba(139,92,246,.25); border-top-color:#8b5cf6;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+@media(max-width:560px){
+  .detail-grid,.attrs{ grid-template-columns:1fr; }
+  .card{ padding:24px; }
+  .card-top-bar{ margin:-24px -24px 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="logo">
+  <span class="mark"><img src="assets/logo-white.png" alt="ObserveMD"></span>
+  Observe<span class="md">MD</span>
+</div>
+
+<div class="card" id="card">
+  <div class="card-top-bar"></div>
+  <div class="spinner" id="loader"></div>
+</div>
+
+<script type="module">
+import { db } from "./assets/firebase.js";
+import {
+  collection, query, where, getDocs,
+  doc, updateDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+const card = document.getElementById("card");
+const ATTR_KEYS = ["professionalism","curiosity","communication","preparedness","punctuality"];
+
+function fmtDate(d){
+  if(!d) return "—";
+  return new Date(d + "T00:00:00").toLocaleDateString("en-US",
+    { weekday:"long", month:"long", day:"numeric", year:"numeric" });
+}
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+function shell(inner){ card.innerHTML = `<div class="card-top-bar"></div>${inner}`; if(window.lucide) lucide.createIcons(); }
+
+function message(icClass, icon, title, text){
+  shell(`
+    <div class="state-ic ${icClass}"><i data-lucide="${icon}"></i></div>
+    <h1>${title}</h1>
+    <p class="lead">${text}</p>
+  `);
+}
+
+async function load(){
+  const token = new URLSearchParams(location.search).get("token");
+  if(!token){
+    return message("ic-rose","link-2-off","Invalid link","This verification link is missing its token. Please use the exact link from your email.");
+  }
+
+  let reqSnap;
+  try{
+    const q = query(collection(db,"verificationRequests"), where("token","==",token));
+    reqSnap = await getDocs(q);
+  }catch(err){
+    console.log("[v0] lookup failed:", err.message);
+    return message("ic-rose","wifi-off","Something went wrong","We couldn't load this request. Please check your connection and try again.");
+  }
+
+  if(reqSnap.empty){
+    return message("ic-rose","link-2-off","Invalid verification link","We couldn't find a request for this link. It may have been removed.");
+  }
+
+  const reqDoc = reqSnap.docs[0];
+  const data   = reqDoc.data();
+
+  // Expiry check
+  const expMs = data.expiresAt?.toMillis ? data.expiresAt.toMillis() : (data.expiresAt ? new Date(data.expiresAt).getTime() : 0);
+  if(data.status === "expired" || (expMs && Date.now() > expMs)){
+    return message("ic-muted","clock","Link expired","This verification link has expired. Please ask the student to send a new request.");
+  }
+
+  // Single-use check
+  if(data.status === "verified"){
+    return message("ic-green","check-circle","Already verified","Thank you — this observation has already been confirmed. No further action is needed.");
+  }
+  if(data.status === "rejected"){
+    return message("ic-muted","x-circle","Already responded","This observation was previously marked as not confirmed. No further action is needed.");
+  }
+
+  renderForm(reqDoc, data);
+}
+
+function renderForm(reqDoc, data){
+  shell(`
+    <div class="state-ic ic-purple"><i data-lucide="shield-check"></i></div>
+    <h1>Verify a shadowing observation</h1>
+    <p class="lead">${esc(data.studentName || "A student")} has requested your confirmation that the observation below took place. This takes less than 30 seconds and requires no account.</p>
+
+    <div class="detail-grid">
+      <div class="detail"><div class="l">Student</div><div class="v">${esc(data.studentName || "—")}</div></div>
+      <div class="detail"><div class="l">Date</div><div class="v" id="dDate">—</div></div>
+      <div class="detail"><div class="l">Specialty</div><div class="v" id="dSpec">—</div></div>
+      <div class="detail"><div class="l">Hours</div><div class="v" id="dHours">—</div></div>
+    </div>
+
+    <div class="q-label">Did this observation occur?</div>
+    <div class="choice-row">
+      <button type="button" class="choice" id="cConfirm"><i data-lucide="check"></i>Confirm</button>
+      <button type="button" class="choice" id="cReject"><i data-lucide="x"></i>Reject</button>
+    </div>
+
+    <div class="extra" id="extra">
+      <div class="section-h">Optional — student attributes you observed</div>
+      <div class="attrs" id="attrs">
+        ${ATTR_KEYS.map(k=>`
+          <label class="attr" data-k="${k}">
+            <input type="checkbox" name="${k}">
+            <span>${k.charAt(0).toUpperCase()+k.slice(1)}</span>
+          </label>`).join("")}
+      </div>
+      <label class="fld">Optional — feedback about the student</label>
+      <textarea id="comment" placeholder="Share any brief feedback (optional)…"></textarea>
+    </div>
+
+    <button class="btn" id="submitBtn" disabled><i data-lucide="send"></i>Submit verification</button>
+    <p class="foot-note">Powered by ObserveMD · this link is single-use and secure.</p>
+  `);
+
+  // Fill detail fields from the associated observation when available,
+  // falling back to the request data.
+  fillDetails(data);
+
+  let verdict = null; // "verified" | "rejected"
+  const extra      = document.getElementById("extra");
+  const submitBtn  = document.getElementById("submitBtn");
+  const cConfirm   = document.getElementById("cConfirm");
+  const cReject    = document.getElementById("cReject");
+
+  function pick(v){
+    verdict = v;
+    cConfirm.classList.toggle("sel-confirm", v === "verified");
+    cReject.classList.toggle("sel-reject", v === "rejected");
+    // Attributes/comment only meaningful on confirm, but keep them available
+    extra.classList.toggle("open", v === "verified");
+    submitBtn.disabled = false;
+  }
+  cConfirm.addEventListener("click", ()=>pick("verified"));
+  cReject.addEventListener("click", ()=>pick("rejected"));
+
+  document.querySelectorAll(".attr").forEach(a=>{
+    const cb = a.querySelector("input");
+    cb.addEventListener("change", ()=>a.classList.toggle("on", cb.checked));
+  });
+
+  submitBtn.addEventListener("click", async ()=>{
+    if(!verdict) return;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = "Submitting…";
+
+    const attributes = {};
+    if(verdict === "verified"){
+      ATTR_KEYS.forEach(k=>{
+        const cb = document.querySelector(`input[name="${k}"]`);
+        if(cb && cb.checked) attributes[k] = true;
+      });
+    }
+    const comment = (document.getElementById("comment")?.value || "").trim();
+
+    try{
+      const update = { status: verdict, verifiedAt: serverTimestamp(), attributes, comment };
+      await updateDoc(doc(db,"verificationRequests",reqDoc.id), update);
+
+      // Mirror onto the observation
+      if(data.observationId){
+        await updateDoc(doc(db,"observations",data.observationId), {
+          verificationStatus: verdict,
+        }).catch(err=>console.log("[v0] obs update skipped:", err.message));
+      }
+
+      if(verdict === "verified"){
+        message("ic-green","check-circle","Observation verified","Thank you for confirming. The student has been notified that this observation is verified. You can safely close this page.");
+      }else{
+        message("ic-muted","x-circle","Response recorded","Thank you. We've recorded that this observation was not confirmed. You can safely close this page.");
+      }
+    }catch(err){
+      console.log("[v0] submit failed:", err.message);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i data-lucide="send"></i>Submit verification';
+      if(window.lucide) lucide.createIcons();
+      alert("Something went wrong submitting your response. Please try again.");
+    }
+  });
+
+  if(window.lucide) lucide.createIcons();
+}
+
+// Pull richer detail from the observation doc if readable; otherwise use request data
+async function fillDetails(data){
+  let date = data.date, spec = data.specialty, hours = data.hours;
+  if(data.observationId){
+    try{
+      const { doc:dref, getDoc } = await import("https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js");
+      const snap = await getDoc(dref(db,"observations",data.observationId));
+      if(snap.exists()){
+        const o = snap.data();
+        date  = o.date ?? date;
+        spec  = o.specialty ?? spec;
+        hours = o.hours ?? hours;
+      }
+    }catch(_){ /* request data fallback */ }
+  }
+  const dDate = document.getElementById("dDate");
+  const dSpec = document.getElementById("dSpec");
+  const dHours= document.getElementById("dHours");
+  if(dDate)  dDate.textContent  = fmtDate(date);
+  if(dSpec)  dSpec.textContent  = spec || "—";
+  if(dHours) dHours.textContent = (hours ?? "—") + (hours != null ? " hrs" : "");
+}
+
+load();
+</script>
+</body>
+</html>

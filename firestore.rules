@@ -8,12 +8,36 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Users can only read/write their own observations
+    // Observations
     match /observations/{obsId} {
+      // Owner has full access
       allow read, write: if request.auth != null
         && request.auth.uid == resource.data.uid;
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.uid;
+
+      // Unauthenticated physician may ONLY flip verificationStatus
+      // to "verified" or "rejected" (no other field may change).
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['verificationStatus'])
+        && request.resource.data.verificationStatus in ['verified', 'rejected'];
+    }
+
+    // Verification requests — gated by the unguessable token, not by auth.
+    match /verificationRequests/{reqId} {
+      // Anyone holding the link can read (client filters by token field).
+      allow read: if true;
+
+      // Only the owning student can create a request.
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.studentId;
+
+      // Physician (no account) may submit a verdict on a still-pending request,
+      // changing only the allowed fields.
+      allow update: if resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'verifiedAt', 'attributes', 'comment'])
+        && request.resource.data.status in ['verified', 'rejected'];
     }
 
     // Deny everything else

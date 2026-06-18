@@ -204,10 +204,74 @@ const OMD = (() => {
     return saved;
   }
 
+  async function updateExperience(id, patch) {
+    const exp = getExperience(id);
+    if (exp?.verificationStatus === "verified") throw new Error("Verified experiences cannot be modified unless verification is revoked.");
+    const { doc, updateDoc, serverTimestamp } = await _fs();
+    await updateDoc(doc(_db, "experiences", id), { ...patch, updatedAt: serverTimestamp() });
+    _experiences = _experiences.map(e => e.id === id ? { ...e, ...patch, updatedAt: new Date().toISOString() } : e);
+    _hydrateExperienceStats();
+  }
+
+  async function deleteExperience(id) {
+    const exp = getExperience(id);
+    if (exp?.verificationStatus === "verified") throw new Error("Verified experiences cannot be deleted unless verification is revoked.");
+    const { doc, deleteDoc } = await _fs();
+    const obs = getObservationsForExperience(id);
+    await Promise.all(obs.map(o => deleteDoc(doc(_db, "observations", o.id))));
+    if (exp?.verificationToken) await deleteDoc(doc(_db, "publicVerifications", exp.verificationToken)).catch(() => {});
+    await deleteDoc(doc(_db, "experiences", id));
+    _list = _list.filter(o => o.experienceId !== id);
+    _experiences = _experiences.filter(e => e.id !== id);
+  }
+
+  async function updateObservation(id, patch) {
+    const obs = _list.find(o => o.id === id);
+    const exp = obs?.experienceId ? getExperience(obs.experienceId) : null;
+    if (exp?.verificationStatus === "verified") throw new Error("Observations in verified experiences cannot be modified unless verification is revoked.");
+    const { doc, updateDoc, serverTimestamp } = await _fs();
+    const next = normalizeObservation({ ...obs, ...patch });
+    await updateDoc(doc(_db, "observations", id), { ...patch, duration: next.duration, hours: next.hours, updatedAt: serverTimestamp() });
+    _list = _list.map(o => o.id === id ? next : o).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    _hydrateExperienceStats();
+  }
+
   async function remove(id) {
     const { doc, deleteDoc } = await _fs();
+    const obs = _list.find(o => o.id === id);
+    const exp = obs?.experienceId ? getExperience(obs.experienceId) : null;
+    if (exp?.verificationStatus === "verified") throw new Error("Observations in verified experiences cannot be modified unless verification is revoked.");
     await deleteDoc(doc(_db, "observations", id));
     _list = _list.filter(o => o.id !== id);
+    _hydrateExperienceStats();
+  }
+
+  function secureToken() {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    return [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function requestVerification(id) {
+    const { doc, setDoc, updateDoc, serverTimestamp } = await _fs();
+    const exp = getExperience(id);
+    if (!exp) throw new Error("Experience not found");
+    if (exp.verificationStatus === "verified") throw new Error("This experience is already verified.");
+    const token = exp.verificationToken || secureToken();
+    const url = new URL("verify.html", window.location.href);
+    url.searchParams.set("token", token);
+    const profile = await getProfile();
+    const patch = { verificationStatus: "pending", verificationToken: token, verificationRequestedAt: new Date().toISOString() };
+    await updateDoc(doc(_db, "experiences", id), { ...patch, updatedAt: serverTimestamp() });
+    _experiences = _experiences.map(e => e.id === id ? { ...e, ...patch } : e);
+    _hydrateExperienceStats();
+    await setDoc(doc(_db, "publicVerifications", token), {
+      token, uid: _uid, experienceId: id, studentName: profile.name || window.OMD_USER?.email || "Student",
+      experienceType: exp.experienceType || "physician", physicianName: exp.physicianName || "", departmentName: exp.departmentName || "", institutionName: exp.institutionName || "",
+      specialty: exp.specialty || "", organization: exp.organization || exp.location || "", startDate: exp.startDate || "", endDate: exp.endDate || "",
+      totalHours: exp.totalHours || 0, totalObservations: exp.totalObservations || 0, verificationStatus: "pending", createdAt: new Date().toISOString()
+    }, { merge: true });
+    return { token, url: url.href, qr: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url.href)}` };
   }
 
   /* ---- Profile (stored in Firestore /users/<uid>) ---- */
@@ -945,12 +1009,20 @@ const OMD = (() => {
       doc.text(`${idx+1}. ${e.title}`, M, y);
       doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...muted);
       doc.text(`${e.totalHours || 0} hrs  •  ${e.totalObservations || 0} observations`, W-M, y, {align:"right"});
+      if (e.verificationStatus === "verified") {
+        doc.setFillColor(34, 197, 94); doc.roundedRect(W - M - 118, y + 7, 118, 16, 4, 4, "F");
+        doc.setTextColor(...white); doc.setFontSize(8); doc.text("Verified Experience", W - M - 59, y + 18, { align:"center" });
+      }
       y += 15;
       doc.setTextColor(...body); doc.setFontSize(9);
       const dateRange = !e.startDate && !e.endDate ? "No dates" : (e.startDate && e.endDate && e.startDate !== e.endDate ? [e.startDate, e.endDate].map(d => fmtDate(d)).join(" – ") : fmtDate(e.startDate || e.endDate));
       doc.text(`${e.specialty || "—"}  —  ${e.organization || e.location || "—"}`, M, y); y += 13;
-      doc.text(`${dateRange}  •  Verification: ${e.verificationStatus || "unverified"}`, M, y);
-      y += 20;
+      doc.text(`${dateRange}  •  Verification: ${e.verificationStatus || "unverified"}`, M, y); y += 13;
+      if (e.verificationStatus === "verified") {
+        doc.text(`Verifier: ${e.verifierName || "—"}  •  Title: ${e.verifierTitle || "—"}  •  Date: ${e.verifiedAt ? new Date(e.verifiedAt).toLocaleDateString("en-US") : "—"}`, M, y);
+        y += 13;
+      }
+      y += 7;
     });
 
     /* ---- Reflection Archive ---- */
@@ -985,7 +1057,7 @@ const OMD = (() => {
   return {
     init,
     REFLECTION_QUESTIONS, SPECIALTIES, THEMES,
-    getAll, getExperiences, getExperience, getObservationsForExperience, add, addExperience, remove, getProfile, saveProfile, seedIfEmpty,
+    getAll, getExperiences, getExperience, getObservationsForExperience, add, addExperience, updateExperience, deleteExperience, requestVerification, updateObservation, remove, getProfile, saveProfile, seedIfEmpty,
     hoursBetween, fmtDate, monthKey, monthLabel, wordCount, round,
     analytics, renderSidebar, toast, openObservationModal, openExperienceModal,
     lineChart, barChart, donut, colorFor, exportPortfolio,

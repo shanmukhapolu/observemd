@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Experience • ObserveMD</title>
+<link rel="icon" type="image/png" href="assets/logo-white.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css"><script src="https://unpkg.com/lucide@latest"></script>
+<style>.verify-shell{max-width:820px;margin:0 auto;padding:24px}.verify-logo{margin:18px 0 26px}.attest{white-space:pre-line;line-height:1.55;color:var(--text)}</style>
+</head>
+<body><main class="verify-shell">
+  <div class="logo verify-logo"><span class="logo-mark"><img src="assets/logo-white.png" alt="ObserveMD icon"></span><span class="logo-wordmark">Observe<span class="logo-md">MD</span></span></div>
+  <div id="app" class="card"><div class="empty"><i data-lucide="loader"></i><h3>Loading verification…</h3></div></div>
+</main>
+<script type="module">
+import { db } from './assets/firebase.js';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js';
+const token = new URLSearchParams(location.search).get('token') || location.pathname.split('/').filter(Boolean).pop();
+const app = document.getElementById('app');
+const fmt=d=>d?new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
+const range=e=>!e.startDate&&!e.endDate?'No observations yet':(e.startDate&&e.endDate&&e.startDate!==e.endDate?[fmt(e.startDate),fmt(e.endDate)].join(' – '):fmt(e.startDate||e.endDate));
+function method(type){ return type === 'department' ? 'department' : type === 'institution' ? 'institution' : 'physician'; }
+async function ip(){ try{ const r=await fetch('https://api.ipify.org?format=json'); return (await r.json()).ip || ''; }catch{return '';} }
+async function load(){
+  if(!token){ app.innerHTML='<div class="empty"><i data-lucide="alert-circle"></i><h3>Missing verification token</h3></div>'; lucide.createIcons(); return; }
+  const pubRef=doc(db,'publicVerifications',token); const pubSnap=await getDoc(pubRef);
+  if(!pubSnap.exists()){ app.innerHTML='<div class="empty"><i data-lucide="alert-circle"></i><h3>Verification link not found</h3><p>Ask the student to generate a new link.</p></div>'; lucide.createIcons(); return; }
+  const v=pubSnap.data();
+  if(v.verificationStatus==='verified'){ app.innerHTML='<div class="empty"><i data-lucide="check-circle"></i><h3>Already verified</h3><p>This Experience has already been successfully verified and recorded by ObserveMD.</p></div>'; lucide.createIcons(); return; }
+  app.innerHTML=`<div class="card-head"><div><h1>Verify Experience</h1><div class="sub">No account required. This should take under 30 seconds.</div></div><span class="badge cyan">Pending Verification</span></div>
+    <div class="mini-grid"><div class="mini-stat"><div class="l">Student</div><div class="v">${v.studentName||'Student'}</div></div><div class="mini-stat"><div class="l">Type</div><div class="v">${v.experienceType||'—'}</div></div><div class="mini-stat"><div class="l">Total Hours</div><div class="v">${v.totalHours||0}</div></div><div class="mini-stat"><div class="l">Observations</div><div class="v">${v.totalObservations||0}</div></div></div>
+    <div class="form-divider">Experience Information</div><div class="form-grid"><div class="field"><label>Physician</label><div>${v.physicianName||'—'}</div></div><div class="field"><label>Specialty</label><div>${v.specialty||'—'}</div></div><div class="field"><label>Organization / Institution</label><div>${v.organization||v.institutionName||'—'}</div></div><div class="field"><label>Date</label><div>${range(v)}</div></div></div>
+    <form id="verifyForm"><div class="form-divider">Verifier Information</div><div class="form-grid"><div class="field"><label>Verifier Name *</label><input name="verifierName" required></div><div class="field"><label>Verifier Title / Position *</label><input name="verifierTitle" required></div><div class="field full"><label>Optional Notes</label><textarea name="verifierNotes"></textarea></div></div>
+    <div class="reflect-resp" style="border-left-color:var(--cyan);margin-top:16px"><p class="attest">I affirm that I am either the physician associated with this experience or an authorized representative of the department, organization, or institution listed above.\n\nTo the best of my knowledge, the information presented is substantially accurate. I understand that this verification may be used by the student for educational, academic, scholarship, volunteer, employment, or professional development purposes.\n\nBy submitting this verification, I confirm that I am not knowingly providing false or misleading information.</p></div>
+    <label style="display:flex;gap:10px;align-items:flex-start;margin-top:16px;color:var(--text)"><input type="checkbox" id="agree" style="margin-top:3px"> I have read and agree to the verification statement above.</label>
+    <div class="modal-actions"><button class="btn" id="submitBtn" disabled style="width:100%;justify-content:center;font-size:1rem"><i data-lucide="badge-check"></i>Verify Experience</button></div></form>`;
+  const agree=document.getElementById('agree'), btn=document.getElementById('submitBtn'); agree.onchange=()=>btn.disabled=!agree.checked;
+  document.getElementById('verifyForm').onsubmit=async e=>{ e.preventDefault(); btn.disabled=true; btn.textContent='Verifying…'; const f=new FormData(e.target); const now=new Date().toISOString(); const addr=await ip(); const patch={verificationStatus:'verified',verifiedAt:now,verificationTimestamp:now,verifierName:f.get('verifierName').trim(),verifierTitle:f.get('verifierTitle').trim(),verifierNotes:(f.get('verifierNotes')||'').trim(),verifierIPAddress:addr,verificationIP:addr,verificationMethod:method(v.experienceType)}; await updateDoc(doc(db,'experiences',v.experienceId),patch); await updateDoc(pubRef,{...patch, updatedAt:serverTimestamp()}); app.innerHTML='<div class="empty"><i data-lucide="check-circle"></i><h3>Thank you.</h3><p>This Experience has been successfully verified and recorded by ObserveMD.</p></div>'; lucide.createIcons(); };
+  lucide.createIcons();
+}
+load();
+</script></body></html>

@@ -146,13 +146,17 @@ window.__settingsReady = false;
 
   /* ---- Clear all data ---- */
   document.getElementById("clearBtn").addEventListener("click", async () => {
-    if (!confirm("Delete ALL your observations and reflections? This cannot be undone.")) return;
+    if (!confirm("Delete ALL your experiences, observations, reflections, and verification requests? This cannot be undone.")) return;
     const { collection, query, where, getDocs, deleteDoc, doc } =
       await import("https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js");
-    const col  = collection(window.OMD_DB, "observations");
-    const q    = query(col, where("uid", "==", window.OMD_USER.uid));
-    const snap = await getDocs(q);
-    const dels = snap.docs.map(d => deleteDoc(doc(window.OMD_DB, "observations", d.id)));
+    const collections = ["observations", "experiences", "publicVerifications"];
+    const dels = [];
+    for (const name of collections) {
+      const col  = collection(window.OMD_DB, name);
+      const q    = query(col, where("uid", "==", window.OMD_USER.uid));
+      const snap = await getDocs(q);
+      snap.docs.forEach(d => dels.push(deleteDoc(doc(window.OMD_DB, name, d.id))));
+    }
     await Promise.all(dels);
     OMD.toast("All data cleared");
     setTimeout(() => location.reload(), 800);

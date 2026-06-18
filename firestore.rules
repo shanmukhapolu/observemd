@@ -8,12 +8,33 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Users can only read/write their own experiences
+    // Users can only read/write their own experiences. Verified records are locked
+    // from normal edits; public token holders can only complete verification.
     match /experiences/{experienceId} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == resource.data.uid;
+      allow read: if request.auth != null && request.auth.uid == resource.data.uid;
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.uid;
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.uid
+        && resource.data.verificationStatus != "verified";
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.uid;
+      allow update: if request.auth == null
+        && resource.data.verificationStatus == "pending"
+        && request.resource.data.verificationToken == resource.data.verificationToken
+        && request.resource.data.verificationStatus == "verified";
+    }
+
+    // Public, token-addressed verification snapshots. The token is the document id.
+    match /publicVerifications/{token} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.uid == request.resource.data.uid;
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.uid;
+      allow update: if request.auth == null
+        && resource.data.verificationStatus == "pending"
+        && request.resource.data.verificationStatus == "verified";
     }
 
     // Users can only read/write their own observations

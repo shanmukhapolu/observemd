@@ -162,8 +162,8 @@ const OMD = (() => {
       return { ...e,
         totalHours: round(obs.reduce((s,o)=>s+(Number(o.duration ?? o.hours) || 0),0)),
         totalObservations: obs.length,
-        startDate: e.startDate || dates[0] || "",
-        endDate: e.endDate || dates[dates.length-1] || e.startDate || "",
+        startDate: dates[0] || e.startDate || "",
+        endDate: dates[dates.length-1] || e.endDate || e.startDate || "",
       };
     }).sort((a,b)=>new Date(b.updatedAt || b.endDate || 0)-new Date(a.updatedAt || a.endDate || 0));
   }
@@ -197,7 +197,7 @@ const OMD = (() => {
     exp.createdAt = now;
     exp.updatedAt = now;
     exp.verificationStatus = exp.verificationStatus || "unverified";
-    exp.title = exp.title || (exp.physicianName ? `Shadowing ${exp.physicianName}` : `Shadowing ${exp.specialty || "Clinical Experience"}`);
+    exp.title = exp.title || (exp.experienceType === "physician" && exp.physicianName ? `Shadowing ${exp.physicianName}` : exp.experienceType === "department" && exp.departmentName ? `Shadowing ${exp.departmentName}` : exp.experienceType === "institution" && exp.institutionName ? `Shadowing ${exp.institutionName}` : `Shadowing ${exp.specialty || "Clinical Experience"}`);
     const ref = await addDoc(collection(_db, "experiences"), exp);
     const saved = { id: ref.id, ...exp, totalHours: 0, totalObservations: 0 };
     _experiences.unshift(saved);
@@ -428,9 +428,11 @@ const OMD = (() => {
               <div class="field experience-only"><label>Provider Name *</label><input name="providerName" required placeholder="Dr. Jane Smith"></div>
               <div class="field experience-only"><label>Provider Title</label><input name="providerTitle" placeholder="Attending Physician"></div>
               <div class="field full experience-only"><label>Location *</label><input name="location" required placeholder="St. Mary's Medical Center"></div>
+              <div class="field"><label>Setting Type *</label><select name="settingType" required><option value="Hospital inpatient">Hospital inpatient</option><option value="Outpatient clinic">Outpatient clinic</option><option value="Emergency department">Emergency department</option><option value="Operating room">Operating room</option><option value="Lab / imaging">Lab / imaging</option></select></div>
+              <div class="field"><label>Duration</label><div id="durationPreview" class="badge" style="display:inline-flex;margin-top:6px">Enter times</div></div>
               <div class="field"><label>Start Time *</label><input type="time" name="startTime" required></div>
               <div class="field"><label>End Time *</label><input type="time" name="endTime" required></div>
-              <div class="field full"><label>Observation Notes *</label><textarea name="notes" required placeholder="Summarize what happened during the session..."></textarea></div>
+              <div class="field full"><label>Session Summary * <span style="color:var(--muted);font-weight:500">Do not enter identifiable patient information under HIPAA.</span></label><textarea name="notes" required placeholder="Summarize what happened during the session without names, MRNs, dates of birth, or other patient identifiers..."></textarea></div>
             </div>
             <div class="form-divider">Reflection Questions</div>
             ${fields}
@@ -461,6 +463,7 @@ const OMD = (() => {
           providerName:  activeExperience?.physicianName || (f.get("providerName") || "").trim(),
           providerTitle: (f.get("providerTitle") || "").trim(),
           location:      activeExperience?.organization || activeExperience?.location || (f.get("location") || "").trim(),
+          settingType:   f.get("settingType"),
           startTime:     f.get("startTime"),
           endTime:       f.get("endTime"),
           hours:         hoursBetween(f.get("startTime"), f.get("endTime")),
@@ -477,8 +480,18 @@ const OMD = (() => {
         submitBtn.innerHTML = '<i data-lucide="save"></i>Save Observation';
         if (window.lucide) lucide.createIcons();
       });
+      const updateDurationPreview = () => {
+        const start = overlay.querySelector('[name="startTime"]').value;
+        const end = overlay.querySelector('[name="endTime"]').value;
+        const out = overlay.querySelector('#durationPreview');
+        const hrs = hoursBetween(start, end);
+        out.textContent = start && end ? `${hrs} hrs` : 'Enter times';
+      };
+      overlay.querySelector('[name="startTime"]').addEventListener('input', updateDurationPreview);
+      overlay.querySelector('[name="endTime"]').addEventListener('input', updateDurationPreview);
       if (window.lucide) lucide.createIcons();
     }
+    overlay.querySelector('#durationPreview').textContent = 'Enter times';
     overlay.querySelector('[name="date"]').value = new Date().toISOString().slice(0, 10);
     overlay._experience = experience;
     overlay.querySelectorAll(".experience-only").forEach(el => { el.style.display = experience ? "none" : ""; el.querySelectorAll("input,select").forEach(i => i.required = !experience && i.name !== "providerTitle"); });
@@ -517,10 +530,10 @@ const OMD = (() => {
           <div class="form-grid">
             <div class="field"><label>Experience Type *</label><select name="experienceType" required><option value="physician">Physician</option><option value="department">Department</option><option value="institution">Institution</option></select></div>
             ${combo("physicianName", "Physician Name", uniqueValues("physicianName"), "Dr. Jane Smith", false)}
+            ${combo("departmentName", "Department Name", uniqueValues("departmentName"), "Surgery Department", false)}
+            ${combo("institutionName", "Institution Name", uniqueValues("institutionName"), "St. Mary's Medical Center", false)}
             ${combo("specialty", "Specialty", [...new Set([...SPECIALTIES, ...uniqueValues("specialty")])].sort(), "Emergency Medicine")}
             ${combo("organization", "Organization / Location", uniqueValues("organization"), "St. Mary's Medical Center")}
-            <div class="field"><label>Start Date</label><input type="date" name="startDate"></div>
-            <div class="field"><label>End Date</label><input type="date" name="endDate"></div>
           </div>
           <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button type="submit" class="btn"><i data-lucide="save"></i>Save Experience</button></div>
         </form>
@@ -528,7 +541,16 @@ const OMD = (() => {
     document.body.appendChild(overlay);
     const type = overlay.querySelector('[name="experienceType"]');
     const phys = overlay.querySelector('[name="physicianName"]').closest('.field');
-    function sync(){ phys.style.display = type.value === 'physician' ? '' : 'none'; overlay.querySelector('[name="physicianName"]').required = type.value === 'physician'; }
+    const dept = overlay.querySelector('[name="departmentName"]').closest('.field');
+    const inst = overlay.querySelector('[name="institutionName"]').closest('.field');
+    function sync(){
+      phys.style.display = type.value === 'physician' ? '' : 'none';
+      dept.style.display = type.value === 'department' ? '' : 'none';
+      inst.style.display = type.value === 'institution' ? '' : 'none';
+      overlay.querySelector('[name="physicianName"]').required = type.value === 'physician';
+      overlay.querySelector('[name="departmentName"]').required = type.value === 'department';
+      overlay.querySelector('[name="institutionName"]').required = type.value === 'institution';
+    }
     type.addEventListener('change', sync); sync();
     overlay.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => overlay.classList.remove("open")));
     overlay.addEventListener("click", e => { if (e.target === overlay) overlay.classList.remove("open"); });
@@ -538,11 +560,11 @@ const OMD = (() => {
       const exp = await addExperience({
         experienceType: f.get('experienceType'),
         physicianName: (f.get('physicianName') || '').trim(),
+        departmentName: (f.get('departmentName') || '').trim(),
+        institutionName: (f.get('institutionName') || '').trim(),
         specialty: (f.get('specialty') || '').trim(),
         organization: (f.get('organization') || '').trim(),
         location: (f.get('organization') || '').trim(),
-        startDate: f.get('startDate') || '',
-        endDate: f.get('endDate') || '',
         verificationStatus: 'unverified',
       });
       overlay.classList.remove('open'); toast('Experience saved'); if (onSaved) onSaved(exp);
@@ -925,7 +947,7 @@ const OMD = (() => {
       doc.text(`${e.totalHours || 0} hrs  •  ${e.totalObservations || 0} observations`, W-M, y, {align:"right"});
       y += 15;
       doc.setTextColor(...body); doc.setFontSize(9);
-      const dateRange = [e.startDate, e.endDate].filter(Boolean).map(d => fmtDate(d)).join(" – ") || "No dates";
+      const dateRange = !e.startDate && !e.endDate ? "No dates" : (e.startDate && e.endDate && e.startDate !== e.endDate ? [e.startDate, e.endDate].map(d => fmtDate(d)).join(" – ") : fmtDate(e.startDate || e.endDate));
       doc.text(`${e.specialty || "—"}  —  ${e.organization || e.location || "—"}`, M, y); y += 13;
       doc.text(`${dateRange}  •  Verification: ${e.verificationStatus || "unverified"}`, M, y);
       y += 20;

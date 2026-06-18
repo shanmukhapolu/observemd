@@ -20,7 +20,7 @@
         <h1>Dashboard</h1>
         <p>Your healthcare observation journey.</p>
       </div>
-      <button class="btn" id="newObsBtn"><i data-lucide="plus"></i>New Observation</button>
+      <button class="btn" id="newExpBtn"><i data-lucide="plus"></i>New Experience</button>
     </div>
 
     <div class="stats-grid" id="stats"></div>
@@ -43,8 +43,8 @@
 
       <div class="stack">
         <div class="card">
-          <div class="card-head"><h3>Recent Observations</h3>
-            <a href="observations.html" class="badge accent">View all</a></div>
+          <div class="card-head"><h3>Recent Experiences</h3>
+            <a href="experiences.html" class="badge accent">View all</a></div>
           <div id="recent"></div>
         </div>
       </div>
@@ -139,14 +139,14 @@ document.getElementById("rangeSeg").addEventListener("click",e=>{
 });
 
 /* ---- Recent observations ---- */
-document.getElementById("recent").innerHTML = a.list.slice(0,5).map(o=>`
-  <div class="row">
+document.getElementById("recent").innerHTML = OMD.getExperiences().slice(0,5).map(e=>`
+  <a class="row" href="experiences.html?id=${e.id}">
     <div class="row-left">
-      <div class="row-title">${o.specialty}</div>
-      <div class="row-sub">${o.providerName} • ${o.hours} hrs</div>
+      <div class="row-title">${e.title}</div>
+      <div class="row-sub">${e.specialty} • ${e.totalHours||0} hrs • ${e.totalObservations||0} observation${e.totalObservations!==1?'s':''}</div>
     </div>
-    <div class="badge">${OMD.fmtDate(o.date,{month:"short",day:"numeric"})}</div>
-  </div>`).join("") || `<p style="color:var(--muted)">No observations yet.</p>`;
+    <div class="badge">${e.verificationStatus||'unverified'}</div>
+  </a>`).join("") || `<p style="color:var(--muted)">No experiences yet.</p>`;
 
 /* ---- Insights ---- */
 const topMonthLabel = a.topMonth ? new Date(a.topMonth[0]+"-01").toLocaleDateString("en-US",{month:"long",year:"numeric"}) : "—";
@@ -175,7 +175,7 @@ document.getElementById("specBars").innerHTML = specSorted.map(([s,h])=>`
     <div class="val">${OMD.round(h)}h</div>
   </div>`).join("");
 
-document.getElementById("newObsBtn").addEventListener("click",()=>OMD.openObservationModal(()=>location.reload()));
+document.getElementById("newExpBtn").addEventListener("click",()=>OMD.openExperienceModal(()=>location.reload()));
 lucide.createIcons();
 })();
 </script>

@@ -42,6 +42,7 @@ const OMD = (() => {
   let _db   = null;
   let _uid  = null;
   let _list = [];        // in-memory cache of observations (sorted desc by date)
+  let _experiences = []; // in-memory cache of experiences (primary organization unit)
 
   /* ---- Firestore helpers ---- */
   // Dynamic import of Firestore functions from the CDN
@@ -69,30 +70,138 @@ const OMD = (() => {
     _db  = window.OMD_DB;
     _uid = window.OMD_USER.uid;
     await _loadAll();
+    await _migrateObservationsToExperiences();
   }
 
   async function _loadAll() {
     const { collection, query, where, orderBy, getDocs } = await _fs();
-    const col = collection(_db, "observations");
-    const q   = query(col, where("uid", "==", _uid), orderBy("date", "desc"));
-    const snap = await getDocs(q);
-    _list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const obsCol = collection(_db, "observations");
+    const obsQ   = query(obsCol, where("uid", "==", _uid), orderBy("date", "desc"));
+    const obsSnap = await getDocs(obsQ);
+    _list = obsSnap.docs.map(d => normalizeObservation({ id: d.id, ...d.data() }));
+
+    const expCol = collection(_db, "experiences");
+    const expQ   = query(expCol, where("uid", "==", _uid), orderBy("updatedAt", "desc"));
+    const expSnap = await getDocs(expQ);
+    _experiences = expSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _hydrateExperienceStats();
+  }
+
+  function normalizeObservation(o) {
+    o.sessionSummary = o.sessionSummary || o.notes || "";
+    o.duration = Number(o.duration ?? o.hours ?? hoursBetween(o.startTime, o.endTime) ?? 0);
+    o.hours = Number(o.hours ?? o.duration ?? 0);
+    o.providerName = o.providerName || o.physicianName || "";
+    o.organization = o.organization || o.location || "";
+    o.location = o.location || o.organization || "";
+    o.reflections = o.reflections || {};
+    for (let i = 0; i < REFLECTION_QUESTIONS.length; i++) {
+      o.reflections[i] = o.reflections[i] ?? o[`reflectionQuestion${i + 1}`] ?? "";
+    }
+    return o;
+  }
+
+  function _experienceKeyFromObservation(o) {
+    return [o.providerName || o.physicianName || "", o.specialty || "", o.location || o.organization || ""]
+      .map(v => String(v).trim().toLowerCase()).join("|");
+  }
+
+  function _experienceFromObservation(o) {
+    const physicianName = (o.providerName || o.physicianName || "").trim();
+    return {
+      uid: _uid,
+      title: physicianName ? `Shadowing ${physicianName}` : `Shadowing ${o.specialty || "Clinical Experience"}`,
+      experienceType: physicianName ? "physician" : "institution",
+      physicianName,
+      specialty: o.specialty || "General Medicine",
+      organization: o.location || o.organization || "",
+      location: o.location || o.organization || "",
+      startDate: o.date,
+      endDate: o.date,
+      verificationStatus: "unverified",
+      createdAt: o.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  async function _migrateObservationsToExperiences() {
+    const needs = _list.filter(o => !o.experienceId);
+    if (!needs.length && _experiences.length) return;
+    const { collection, addDoc, doc, updateDoc, serverTimestamp } = await _fs();
+    const byKey = new Map(_experiences.map(e => [[e.physicianName || "", e.specialty || "", e.organization || e.location || ""].map(v => String(v).trim().toLowerCase()).join("|"), e]));
+    const groups = new Map();
+    needs.forEach(o => {
+      const key = _experienceKeyFromObservation(o) || o.id;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(o);
+    });
+    for (const [key, obs] of groups) {
+      let exp = byKey.get(key);
+      if (!exp) {
+        const seed = _experienceFromObservation(obs[0]);
+        const dates = obs.map(o => o.date).filter(Boolean).sort();
+        seed.startDate = dates[0] || seed.startDate;
+        seed.endDate = dates[dates.length - 1] || seed.endDate;
+        const ref = await addDoc(collection(_db, "experiences"), seed);
+        exp = { id: ref.id, ...seed };
+        _experiences.push(exp);
+        byKey.set(key, exp);
+      }
+      for (const o of obs) {
+        o.experienceId = exp.id;
+        await updateDoc(doc(_db, "observations", o.id), { experienceId: exp.id, sessionSummary: o.sessionSummary, duration: o.duration, hours: o.hours, updatedAt: serverTimestamp() });
+      }
+    }
+    _hydrateExperienceStats();
+  }
+
+  function _hydrateExperienceStats() {
+    _experiences = _experiences.map(e => {
+      const obs = _list.filter(o => o.experienceId === e.id).sort((a,b)=>new Date(a.date)-new Date(b.date));
+      const dates = obs.map(o => o.date).filter(Boolean);
+      return { ...e,
+        totalHours: round(obs.reduce((s,o)=>s+(Number(o.duration ?? o.hours) || 0),0)),
+        totalObservations: obs.length,
+        startDate: e.startDate || dates[0] || "",
+        endDate: e.endDate || dates[dates.length-1] || e.startDate || "",
+      };
+    }).sort((a,b)=>new Date(b.updatedAt || b.endDate || 0)-new Date(a.updatedAt || a.endDate || 0));
   }
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   /* ---- Public data API ---- */
   function getAll() { return _list; }
+  function getExperiences() { _hydrateExperienceStats(); return _experiences; }
+  function getExperience(id) { _hydrateExperienceStats(); return _experiences.find(e => e.id === id); }
+  function getObservationsForExperience(id) { return _list.filter(o => o.experienceId === id).sort((a,b)=>new Date(a.date)-new Date(b.date)); }
 
   async function add(obs) {
-    const { collection, addDoc } = await _fs();
+    const { collection, addDoc, doc, updateDoc, serverTimestamp } = await _fs();
     obs.uid       = _uid;
     obs.createdAt = new Date().toISOString();
+    obs = normalizeObservation(obs);
     const ref  = await addDoc(collection(_db, "observations"), obs);
     obs.id     = ref.id;
     _list.unshift(obs);
     _list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (obs.experienceId) await updateDoc(doc(_db, "experiences", obs.experienceId), { updatedAt: serverTimestamp(), endDate: obs.date });
+    _hydrateExperienceStats();
     return obs;
+  }
+
+  async function addExperience(exp) {
+    const { collection, addDoc } = await _fs();
+    const now = new Date().toISOString();
+    exp.uid = _uid;
+    exp.createdAt = now;
+    exp.updatedAt = now;
+    exp.verificationStatus = exp.verificationStatus || "unverified";
+    exp.title = exp.title || (exp.physicianName ? `Shadowing ${exp.physicianName}` : `Shadowing ${exp.specialty || "Clinical Experience"}`);
+    const ref = await addDoc(collection(_db, "experiences"), exp);
+    const saved = { id: ref.id, ...exp, totalHours: 0, totalObservations: 0 };
+    _experiences.unshift(saved);
+    return saved;
   }
 
   async function remove(id) {
@@ -155,6 +264,15 @@ const OMD = (() => {
 
     const bySpec = {};
     list.forEach(o => { bySpec[o.specialty] = (bySpec[o.specialty] || 0) + (o.hours || 0); });
+    const byPhysician = {}, byOrganization = {}, verifiedHours = { verified: 0, pending: 0, unverified: 0 }, obsPerExperience = {};
+    _hydrateExperienceStats();
+    _experiences.forEach(e => {
+      const hrs = e.totalHours || 0;
+      if (e.physicianName) byPhysician[e.physicianName] = (byPhysician[e.physicianName] || 0) + hrs;
+      if (e.organization || e.location) byOrganization[e.organization || e.location] = (byOrganization[e.organization || e.location] || 0) + hrs;
+      verifiedHours[e.verificationStatus || "unverified"] = (verifiedHours[e.verificationStatus || "unverified"] || 0) + hrs;
+      obsPerExperience[e.title] = e.totalObservations || 0;
+    });
 
     const byDay = [0,0,0,0,0,0,0];
     list.forEach(o => { byDay[new Date(o.date + "T00:00:00").getDay()] += (o.hours || 0); });
@@ -208,7 +326,7 @@ const OMD = (() => {
     return {
       list, totalHours, sessions, specialtiesCount: specialtiesSet.size,
       providersCount: providersSet.size, respCount,
-      byMonth, monthsSorted, sessMonth, bySpec, byDay, dayNames,
+      byMonth, monthsSorted, sessMonth, bySpec, byPhysician, byOrganization, verifiedHours, obsPerExperience, byDay, dayNames,
       longest: round(longest), shortest: round(shortest), avgSession,
       bestStreak: best, totalWords, avgReflection, wordsByMonth, themeCounts, uniqueWords,
       topSpec, lowSpec, topMonth, topDay: dayNames[topDay],
@@ -218,10 +336,10 @@ const OMD = (() => {
   /* ---- Sidebar ---- */
   const NAV = [
     { id: "dashboard",    label: "Dashboard",       icon: "layout-dashboard", href: "dashboard.html" },
-    { id: "observations", label: "Observations",     icon: "eye",             href: "observations.html" },
+    { id: "experiences",  label: "Experiences",      icon: "stethoscope", href: "experiences.html" },
     { id: "reflections",  label: "Reflections",      icon: "book-open",       href: "reflections.html" },
     { id: "analytics",    label: "Analytics",        icon: "bar-chart-3",     href: "analytics.html" },
-    { id: "export",       label: "Export Portfolio", icon: "download",        href: "#export" },
+    { id: "portfolio",    label: "Portfolio",        icon: "download",        href: "#export" },
   ];
 
   function renderSidebar(active) {
@@ -260,7 +378,7 @@ const OMD = (() => {
 
     document.body.insertAdjacentHTML("afterbegin", html);
 
-    document.querySelector('[data-nav="export"]').addEventListener("click", (e) => {
+    document.querySelector('[data-nav="portfolio"]').addEventListener("click", (e) => {
       e.preventDefault();
       exportPortfolio();
     });
@@ -280,7 +398,7 @@ const OMD = (() => {
   }
 
   /* ---- Observation modal ---- */
-  function openObservationModal(onSaved) {
+  function openObservationModal(onSaved, experience = null) {
     let overlay = document.getElementById("obsModal");
     if (!overlay) {
       const fields = REFLECTION_QUESTIONS.map((q, i) => `
@@ -306,10 +424,10 @@ const OMD = (() => {
             <div class="form-divider">Observation Information</div>
             <div class="form-grid">
               <div class="field"><label>Date *</label><input type="date" name="date" required></div>
-              <div class="field"><label>Specialty *</label><select name="specialty" required>${specOpts}</select></div>
-              <div class="field"><label>Provider Name *</label><input name="providerName" required placeholder="Dr. Jane Smith"></div>
-              <div class="field"><label>Provider Title *</label><input name="providerTitle" required placeholder="Attending Physician"></div>
-              <div class="field full"><label>Location *</label><input name="location" required placeholder="St. Mary's Medical Center"></div>
+              <div class="field experience-only"><label>Specialty *</label><select name="specialty" required>${specOpts}</select></div>
+              <div class="field experience-only"><label>Provider Name *</label><input name="providerName" required placeholder="Dr. Jane Smith"></div>
+              <div class="field experience-only"><label>Provider Title</label><input name="providerTitle" placeholder="Attending Physician"></div>
+              <div class="field full experience-only"><label>Location *</label><input name="location" required placeholder="St. Mary's Medical Center"></div>
               <div class="field"><label>Start Time *</label><input type="time" name="startTime" required></div>
               <div class="field"><label>End Time *</label><input type="time" name="endTime" required></div>
               <div class="field full"><label>Observation Notes *</label><textarea name="notes" required placeholder="Summarize what happened during the session..."></textarea></div>
@@ -335,16 +453,19 @@ const OMD = (() => {
         const f = new FormData(e.target);
         const reflections = {};
         REFLECTION_QUESTIONS.forEach((q, i) => reflections[i] = (f.get("r" + i) || "").trim());
+        const activeExperience = overlay._experience || null;
         const obs = {
           date:          f.get("date"),
-          specialty:     f.get("specialty"),
-          providerName:  f.get("providerName").trim(),
-          providerTitle: f.get("providerTitle").trim(),
-          location:      f.get("location").trim(),
+          experienceId:   activeExperience?.id || f.get("experienceId") || "",
+          specialty:     activeExperience?.specialty || f.get("specialty"),
+          providerName:  activeExperience?.physicianName || (f.get("providerName") || "").trim(),
+          providerTitle: (f.get("providerTitle") || "").trim(),
+          location:      activeExperience?.organization || activeExperience?.location || (f.get("location") || "").trim(),
           startTime:     f.get("startTime"),
           endTime:       f.get("endTime"),
           hours:         hoursBetween(f.get("startTime"), f.get("endTime")),
           notes:         f.get("notes").trim(),
+          sessionSummary:f.get("notes").trim(),
           reflections,
         };
         await add(obs);
@@ -359,7 +480,75 @@ const OMD = (() => {
       if (window.lucide) lucide.createIcons();
     }
     overlay.querySelector('[name="date"]').value = new Date().toISOString().slice(0, 10);
+    overlay._experience = experience;
+    overlay.querySelectorAll(".experience-only").forEach(el => { el.style.display = experience ? "none" : ""; el.querySelectorAll("input,select").forEach(i => i.required = !experience && i.name !== "providerTitle"); });
+    const head = overlay.querySelector(".modal-head h2");
+    if (head) head.textContent = experience ? `Add Observation to ${experience.title}` : "New Observation";
     overlay.classList.add("open");
+  }
+
+
+
+  function uniqueValues(field) {
+    const vals = new Set();
+    _experiences.forEach(e => { if (e[field]) vals.add(e[field]); });
+    _list.forEach(o => {
+      if (field === "physicianName" && o.providerName) vals.add(o.providerName);
+      if (field === "specialty" && o.specialty) vals.add(o.specialty);
+      if (field === "organization" && (o.location || o.organization)) vals.add(o.location || o.organization);
+    });
+    return [...vals].sort();
+  }
+
+  function combo(name, label, values, placeholder, required = true) {
+    return `<div class="field"><label>${label}${required ? " *" : ""}</label><input name="${name}" list="${name}List" ${required ? "required" : ""} placeholder="${placeholder}"><datalist id="${name}List">${values.map(v=>`<option value="${v}"></option>`).join("")}</datalist></div>`;
+  }
+
+  function openExperienceModal(onSaved) {
+    let overlay = document.getElementById("expModal");
+    if (overlay) overlay.remove();
+    overlay = document.createElement("div");
+    overlay.id = "expModal";
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-head"><div><h2>New Experience</h2><p>Create the shadowing context once, then add sessions underneath it.</p></div><button class="icon-btn" data-close><i data-lucide="x"></i></button></div>
+        <form id="expForm">
+          <div class="form-grid">
+            <div class="field"><label>Experience Type *</label><select name="experienceType" required><option value="physician">Physician</option><option value="department">Department</option><option value="institution">Institution</option></select></div>
+            ${combo("physicianName", "Physician Name", uniqueValues("physicianName"), "Dr. Jane Smith", false)}
+            ${combo("specialty", "Specialty", [...new Set([...SPECIALTIES, ...uniqueValues("specialty")])].sort(), "Emergency Medicine")}
+            ${combo("organization", "Organization / Location", uniqueValues("organization"), "St. Mary's Medical Center")}
+            <div class="field"><label>Start Date</label><input type="date" name="startDate"></div>
+            <div class="field"><label>End Date</label><input type="date" name="endDate"></div>
+          </div>
+          <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button type="submit" class="btn"><i data-lucide="save"></i>Save Experience</button></div>
+        </form>
+      </div>`;
+    document.body.appendChild(overlay);
+    const type = overlay.querySelector('[name="experienceType"]');
+    const phys = overlay.querySelector('[name="physicianName"]').closest('.field');
+    function sync(){ phys.style.display = type.value === 'physician' ? '' : 'none'; overlay.querySelector('[name="physicianName"]').required = type.value === 'physician'; }
+    type.addEventListener('change', sync); sync();
+    overlay.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => overlay.classList.remove("open")));
+    overlay.addEventListener("click", e => { if (e.target === overlay) overlay.classList.remove("open"); });
+    overlay.querySelector('#expForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const exp = await addExperience({
+        experienceType: f.get('experienceType'),
+        physicianName: (f.get('physicianName') || '').trim(),
+        specialty: (f.get('specialty') || '').trim(),
+        organization: (f.get('organization') || '').trim(),
+        location: (f.get('organization') || '').trim(),
+        startDate: f.get('startDate') || '',
+        endDate: f.get('endDate') || '',
+        verificationStatus: 'unverified',
+      });
+      overlay.classList.remove('open'); toast('Experience saved'); if (onSaved) onSaved(exp);
+    });
+    if (window.lucide) lucide.createIcons();
+    overlay.classList.add('open');
   }
 
   /* ---- Charts (SVG) ---- */
@@ -630,7 +819,7 @@ const OMD = (() => {
     // Stat cards — light card style
     const coverStats = [
       ["Total Hours",   a.totalHours + " hrs"],
-      ["Observations",  String(a.sessions)],
+      ["Experiences",   String(getExperiences().length)],
       ["Specialties",   String(a.specialtiesCount)],
       ["Reflections",   String(a.respCount)],
     ];
@@ -726,20 +915,20 @@ const OMD = (() => {
       y += 6;
     });
 
-    /* ---- Complete Observation Log ---- */
-    newPage("Complete Observation Log");
-    a.list.forEach((o, idx) => {
-      ensure(70, "Observation Log");
+    /* ---- Complete Experience Log ---- */
+    newPage("Complete Experience Log");
+    getExperiences().forEach((e, idx) => {
+      ensure(62, "Experience Log");
       doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...ink);
-      doc.text(`${idx+1}. ${o.specialty}`, M, y);
+      doc.text(`${idx+1}. ${e.title}`, M, y);
       doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...muted);
-      doc.text(`${fmtDate(o.date)}  •  ${o.hours} hrs`, W-M, y, {align:"right"});
+      doc.text(`${e.totalHours || 0} hrs  •  ${e.totalObservations || 0} observations`, W-M, y, {align:"right"});
       y += 15;
       doc.setTextColor(...body); doc.setFontSize(9);
-      doc.text(`${o.providerName}, ${o.providerTitle}  —  ${o.location}  (${o.startTime}–${o.endTime})`, M, y);
-      y += 14;
-      para(o.notes||"", 9, 5);
-      y += 8;
+      const dateRange = [e.startDate, e.endDate].filter(Boolean).map(d => fmtDate(d)).join(" – ") || "No dates";
+      doc.text(`${e.specialty || "—"}  —  ${e.organization || e.location || "—"}`, M, y); y += 13;
+      doc.text(`${dateRange}  •  Verification: ${e.verificationStatus || "unverified"}`, M, y);
+      y += 20;
     });
 
     /* ---- Reflection Archive ---- */
@@ -774,9 +963,9 @@ const OMD = (() => {
   return {
     init,
     REFLECTION_QUESTIONS, SPECIALTIES, THEMES,
-    getAll, add, remove, getProfile, saveProfile, seedIfEmpty,
+    getAll, getExperiences, getExperience, getObservationsForExperience, add, addExperience, remove, getProfile, saveProfile, seedIfEmpty,
     hoursBetween, fmtDate, monthKey, monthLabel, wordCount, round,
-    analytics, renderSidebar, toast, openObservationModal,
+    analytics, renderSidebar, toast, openObservationModal, openExperienceModal,
     lineChart, barChart, donut, colorFor, exportPortfolio,
   };
 })();

@@ -44,6 +44,7 @@ OMD.renderSidebar("reflections");
 await OMD.init();
 const Q = OMD.REFLECTION_QUESTIONS;
 const all = OMD.getAll();
+function expFor(o){ return OMD.getExperience(o.experienceId); }
 
 const specs = [...new Set(all.map(o=>o.specialty))].sort();
 document.getElementById("fSpec").innerHTML += specs.map(s=>`<option>${s}</option>`).join("");
@@ -86,7 +87,7 @@ function render(){
             <div class="reflect-resp">
               <div class="meta">
                 <span class="badge accent">${r.o.specialty}</span>
-                <span class="badge">${r.o.providerName}</span>
+                ${expFor(r.o)?`<a class="badge" href="experiences.html?id=${r.o.experienceId}">${expFor(r.o).title}</a>`:`<span class="badge">${r.o.providerName}</span>`}
                 <span class="date">${OMD.fmtDate(r.o.date,{month:"long",day:"numeric",year:"numeric"})}</span>
               </div>
               <p>${highlight(r.text,q)}</p>

@@ -46,6 +46,14 @@
       </div>
     </div>
     <div class="mini-grid" id="specMini" style="margin-top:16px"></div>
+    <div class="grid-2-even" style="margin-top:16px">
+      <div class="card"><div class="card-head"><h3>Hours by Physician</h3></div><div id="physBars"></div></div>
+      <div class="card"><div class="card-head"><h3>Hours by Organization</h3></div><div id="orgBars"></div></div>
+    </div>
+    <div class="grid-2-even" style="margin-top:16px">
+      <div class="card"><div class="card-head"><h3>Verified vs Unverified Hours</h3></div><div id="verifyBars"></div></div>
+      <div class="card"><div class="card-head"><h3>Observation Count per Experience</h3></div><div id="expObsBars"></div></div>
+    </div>
 
     <!-- REFLECTION ANALYTICS -->
     <div class="section-title"><span class="si"><i data-lucide="pen-line"></i></span>Reflection Analytics</div>
@@ -121,6 +129,16 @@ document.getElementById("specMini").innerHTML =
   mini("Least Observed", a.lowSpec?a.lowSpec[0]:"—") +
   mini("Specialties", a.specialtiesCount) +
   mini("Provider Diversity", a.providersCount+" providers");
+
+function barsFromMap(id, map, suffix='h'){
+  const entries=Object.entries(map).sort((x,z)=>z[1]-x[1]); const max=Math.max(...entries.map(e=>e[1]),1);
+  document.getElementById(id).innerHTML=entries.length?entries.map(([l,v])=>`<div class="bar-row"><div class="lab">${l}</div><div class="bar-track"><div class="bar-fill" style="width:${v/max*100}%"></div></div><div class="val">${r(v)}${suffix}</div></div>`).join(''):`<p style="color:var(--muted)">No data yet.</p>`;
+}
+barsFromMap('physBars', a.byPhysician);
+barsFromMap('orgBars', a.byOrganization);
+barsFromMap('verifyBars', a.verifiedHours);
+barsFromMap('expObsBars', a.obsPerExperience, '');
+
 
 /* REFLECTION */
 const mostReflectiveMonth = Object.entries(a.wordsByMonth).sort((x,z)=>z[1]-x[1])[0];

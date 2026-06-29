@@ -595,6 +595,22 @@ footer{
     }
 }
 
+
+.waitlist-form input{min-width:280px;flex:1;height:54px;padding:0 1.2rem;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:white;outline:none;font:inherit;}
+.waitlist-form input:focus{border-color:#8b5cf6;box-shadow:0 0 0 4px rgba(139,92,246,.15);}
+.outcome-grid{grid-template-columns:repeat(4,1fr);}
+.outcome-card{min-height:280px;padding:2.2rem;box-shadow:0 22px 70px rgba(0,0,0,.22);}
+.card-icon{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;margin-bottom:1.5rem;background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(6,182,212,.2));color:#c4b5fd;font-weight:800;}
+.outcome-card h3{font-size:1.35rem;}
+.comparison-card{display:grid;grid-template-columns:1fr 1fr;gap:1px;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:32px;background:rgba(255,255,255,.08);box-shadow:0 24px 80px rgba(0,0,0,.25);}
+.comparison-col{padding:2.2rem;background:rgba(11,16,32,.86);}
+.comparison-col.muted-col{background:rgba(255,255,255,.035);}
+.comparison-col h3{font-family:'Space Grotesk';font-size:1.5rem;margin-bottom:1.25rem;}
+.comparison-col ul{list-style:none;display:grid;gap:1rem;}
+.comparison-col li{padding:1rem 1.1rem;border-radius:16px;background:rgba(255,255,255,.045);color:#dbe4f0;}
+.comparison-col:not(.muted-col) li{border:1px solid rgba(6,182,212,.18);}
+@media(max-width:1100px){.outcome-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:768px){.waitlist-form{flex-direction:column}.waitlist-form input{width:100%;min-width:0}.outcome-grid,.comparison-card{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -606,15 +622,10 @@ footer{
 <div class="container nav-inner">
 <div class="logo"><img class="logo-icon" src="assets/logo-white.png" alt="ObserveMD icon">Observe<span>MD</span></div>
 
-<div class="nav-links">
-<a href="#">Features</a>
-<a href="#">Benefits</a>
-<a href="#">About</a>
-<a href="#">Testimonials</a>
-</div>
+<div class="nav-links"></div>
 
-<button class="btn" onclick="location.href='signup.html'">
-    Get Started
+<button class="btn" onclick="document.getElementById('waitlistEmail').focus()">
+    Join Waitlist
 </button>
 </div>
 </nav>
@@ -622,12 +633,12 @@ footer{
 <section class="hero">
 <div class="container hero-grid">
     <div class="hero-content">
-        <h1>Shadow <span>Smarter.</span> Not Harder.</h1>
-        <p>A system for recording shadowing hours and clinical experiences in one place, helping students make sense of the time they spend observing medicine and how it builds toward their future in healthcare.</p>
-        <div class="hero-buttons">
-            <button class="btn">Start Tracking</button>
-            <button class="btn secondary">Learn More</button>
-        </div>
+        <h1>Built for <span>Shadowing.</span> Not Spreadsheets.</h1>
+        <p>Track shadowing hours, record meaningful reflections, and keep every clinical experience organized in one place.</p>
+        <form class="waitlist-form hero-buttons" id="waitlistForm">
+            <input id="waitlistEmail" type="email" placeholder="Enter your email" required aria-label="Email address">
+            <button class="btn" type="submit">Join Waitlist</button>
+        </form>
     </div>
     <div class="dashboard-preview">
         <div class="preview-card">
@@ -641,30 +652,15 @@ footer{
 <div class="container">
 
 <div class="section-title reveal">
-<h2>Why Students Love Observe<span id="md">MD</span></h2>
-<p>Built specifically for healthcare career pathways.</p>
+<h2>Designed for Application-Ready Shadowing</h2>
+<p>Outcome-focused tools that turn scattered clinical moments into organized records.</p>
 </div>
 
-<div class="stats">
-<div class="stat reveal">
-<h3>100%</h3>
-<p>Free</p>
-</div>
-
-<div class="stat reveal">
-<h3>∞</h3>
-<p>Unlimited Hours</p>
-</div>
-
-<div class="stat reveal">
-<h3>24/7</h3>
-<p>Access</p>
-</div>
-
-<div class="stat reveal">
-<h3>0</h3>
-<p>Ads</p>
-</div>
+<div class="grid outcome-grid">
+<div class="card outcome-card reveal"><div class="card-icon">01</div><h3>Never Lose Track of Hours</h3><p>Every hour, provider, and specialty organized in one timeline.</p></div>
+<div class="card outcome-card reveal"><div class="card-icon">02</div><h3>Remember What Actually Mattered</h3><p>Capture reflections while every patient interaction is still fresh.</p></div>
+<div class="card outcome-card reveal"><div class="card-icon">03</div><h3>Know Exactly Where You Stand</h3><p>Instantly see your total hours and specialty experience.</p></div>
+<div class="card outcome-card reveal"><div class="card-icon">04</div><h3>Export in Minutes, Not Hours</h3><p>Generate organized records whenever applications require them.</p></div>
 </div>
 
 </div>
@@ -674,41 +670,13 @@ footer{
 <div class="container">
 
 <div class="section-title reveal">
-<h2>Features</h2>
+<h2>Ditch the Spreadsheet.</h2>
+<p>ObserveMD brings your hours, notes, reflections, and exports into one workspace.</p>
 </div>
 
-<div class="grid">
-
-<div class="card reveal">
-<h3>Hour Logging</h3>
-<p>Track dates, duration, specialties, physicians, and facilities.</p>
-</div>
-
-<div class="card reveal">
-<h3>Reflection Journal</h3>
-<p>Store meaningful patient-care observations and experiences.</p>
-</div>
-
-<div class="card reveal">
-<h3>Progress Dashboard</h3>
-<p>Visualize total hours and specialty exposure over time.</p>
-</div>
-
-<div class="card reveal">
-<h3>Application Ready</h3>
-<p>Export records when preparing for college or professional programs.</p>
-</div>
-
-<div class="card reveal">
-<h3>Secure Storage</h3>
-<p>Your experiences remain organized and accessible.</p>
-</div>
-
-<div class="card reveal">
-<h3>Mobile Friendly</h3>
-<p>Log hours from anywhere on any device.</p>
-</div>
-
+<div class="comparison-card reveal">
+<div class="comparison-col muted-col"><h3>Current Method</h3><ul><li>Google Sheets</li><li>Notes app</li><li>Paper logs</li><li>Forgotten reflections</li><li>Manual hour counting</li></ul></div>
+<div class="comparison-col"><h3>Observe<span id="md">MD</span></h3><ul><li>One organized timeline</li><li>Reflection journal</li><li>Running totals</li><li>Application ready exports</li><li>Everything in one place</li></ul></div>
 </div>
 
 </div>
@@ -722,35 +690,7 @@ footer{
 </div>
 
 <div class="card reveal">
-<p>
-ObserveMD was created by students who are also figuring out what it means to step into medicine, dealing with the same scattered notes, forgotten hours, and unorganized experiences across clinics and specialties. It’s meant to bring those moments into one place that actually reflects the effort behind them, so nothing important gets lost while you’re focused on learning.
-</p>
-</div>
-
-</div>
-</section>
-
-<section>
-<div class="container">
-
-<div class="section-title reveal">
-<h2>What Students Are Saying</h2>
-</div>
-
-<div class="grid">
-
-<div class="card testimonial reveal">
-"Finally a simple way to organize all my shadowing experiences."
-</div>
-
-<div class="card testimonial reveal">
-"The dashboard helped me understand which specialties I had explored."
-</div>
-
-<div class="card testimonial reveal">
-"Exactly the tool I wish I had during my first shadowing experience."
-</div>
-
+<p>Built by students who experienced the frustration of tracking shadowing through spreadsheets, notes, and scattered documents. ObserveMD exists to make documenting clinical experiences simple from day one.</p>
 </div>
 
 </div>
@@ -771,8 +711,8 @@ pursuing a healthcare career.
 
 <br>
 
-<button class="btn">
-Start Tracking
+<button class="btn" onclick="document.getElementById('waitlistEmail').focus()">
+Join Waitlist
 </button>
 
 </div>
@@ -783,7 +723,26 @@ Start Tracking
 © 2026 ObserveMD • Built for future healthcare professionals.
 </footer>
 
-</body>
+
+<script type="module">
+import { db } from "./assets/firebase.js";
+import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+const form = document.getElementById("waitlistForm");
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("waitlistEmail").value.trim();
+  const btn = form.querySelector("button");
+  btn.disabled = true; btn.textContent = "Joining…";
+  try {
+    const ref = await addDoc(collection(db, "waitlist"), { email, source: "homepage", createdAt: serverTimestamp() });
+    sessionStorage.setItem("omd_waitlist_email", email);
+    sessionStorage.setItem("omd_waitlist_id", ref.id);
+    window.location.href = `waitlist-survey.html?id=${encodeURIComponent(ref.id)}`;
+  } catch (err) {
+    alert(err.message); btn.disabled = false; btn.textContent = "Join Waitlist";
+  }
+});
+</script>
 <script>
 const reveals =
 document.querySelectorAll('.reveal');
@@ -805,4 +764,5 @@ reveals.forEach(el=>{
 observer.observe(el);
 });
 </script>
+</body>
 </html>

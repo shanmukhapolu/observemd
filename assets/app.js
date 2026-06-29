@@ -215,7 +215,6 @@ const OMD = (() => {
 
   async function deleteExperience(id) {
     const exp = getExperience(id);
-    if (exp?.verificationStatus === "verified") throw new Error("Verified experiences cannot be deleted unless verification is revoked.");
     const { doc, deleteDoc } = await _fs();
     const obs = getObservationsForExperience(id);
     await Promise.all(obs.map(o => deleteDoc(doc(_db, "observations", o.id))));
